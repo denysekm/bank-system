@@ -8,7 +8,7 @@
   position: fixed;       /* přilepíme nahoru */
   top: 0;
   left: 0;
-  width: 95%;           /* roztáhneme přes celou šířku */
+  width: 97%;           /* roztáhneme přes celou šířku */
   z-index: 1000;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* decentní stín */
 }

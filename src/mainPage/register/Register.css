@@ -3,6 +3,14 @@ body {
   background: linear-gradient(135deg, #e6d4f6, #fbd5d5);
 }
 
+.register-background {
+  min-height: 100vh; /* pozadí přes celou výšku */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #e6d4f6, #fbd5d5); /* stejné růžové jako v Main.css */
+}
+
 .form-container {
   background: #fff;
   padding: 20px 30px;

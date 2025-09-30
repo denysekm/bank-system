@@ -47,6 +47,7 @@ function Register() {
   };
 
   return (
+  <div className="register-background">
     <div className="form-container">
       <button
         className="close-button"
@@ -160,6 +161,7 @@ function Register() {
         </div>
       </form>
     </div>
+  </div>
   );
 }
 

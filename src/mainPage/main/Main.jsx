@@ -6,7 +6,7 @@ function Main() {
   const navigate = useNavigate();
 
   return (
-    <div>
+    <div className='background'>
       <div className="main">
         <div className="offer-box">
           <h1>Banka v telefonu</h1>
