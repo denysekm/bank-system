@@ -1,0 +1,133 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #e6d4f6, #fbd5d5);
+  color: #333;
+}
+
+/* Main content */
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+}
+
+.offer-box {
+  max-width: 550px;
+  background-color: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.offer-box h1 {
+  font-size: 30px;
+  margin-bottom: 15px;
+  color: #3a2f61;
+}
+
+.offer-box p {
+  font-size: 18px;
+  color: #555;
+  margin-bottom: 30px;
+}
+
+.register-button {
+  background-color: #ff5f5f;
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.register-button:hover {
+  background-color: #e84848;
+}
+
+.login-text {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: -20px;
+}
+
+.login-text a {
+  color: #6c47ff;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 5px;
+}
+
+/* Features */
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 60px;
+  flex-wrap: wrap;
+}
+
+.feature {
+  background-color: white;
+  border-radius: 16px;
+  padding: 30px;
+  width: 260px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.feature h3 {
+  margin-top: 0;
+  color: #3a2f61;
+}
+
+.feature p {
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .main {
+    padding: 40px 20px;
+  }
+
+  .offer-box {
+    padding: 20px;
+    max-width: 100%;
+  }
+
+  .features {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .feature {
+    width: 100%;
+    padding: 20px;
+  }
+}
+.login-link {
+  background-color: #6c47ff; /* fialové tlačítko */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.login-link:hover {
+  background-color: #5433c8; /* tmavší fialová při hover */
+}
