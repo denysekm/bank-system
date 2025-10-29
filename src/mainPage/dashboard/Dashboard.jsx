@@ -1,127 +1,319 @@
-import React, { useState } from 'react';
-import './Dashboard.css';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../../AuthContext";
+import { useNavigate } from "react-router-dom";
+import "./Dashboard.css";
 
-function Dashboard() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [submenuOpen, setSubmenuOpen] = useState(false);
-  const [currentCard, setCurrentCard] = useState(0);
+export default function Dashboard() {
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
 
-  const cards = [
-    { number: '1234 5678 9012 3456', cvv: '123', endDate: '12/25', balance: '12 345 UAH', type: 'Debit' },
-    { number: '9876 5432 1098 7654', cvv: '456', endDate: '11/26', balance: '5 000 UAH', type: 'Credit' }
-  ];
+  // data o klientovi a účtu
+  const [client, setClient] = useState(null);
+  const [cards, setCards] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
-  const transactions = [
-    { sender: 'Ivan', receiver: 'Petro', amount: '500 ₴', note: 'Oběd', date: '27.09.2025 12:00' },
-    { sender: 'Firma', receiver: 'Ivan', amount: '25 000 ₴', note: 'Výplata', date: '26.09.2025 09:00' }
-  ];
+  // výběr karty / nový card flow
+  const [showCreateCard, setShowCreateCard] = useState(false);
+  const [newCardType, setNewCardType] = useState("DEBIT");
+  const [createError, setCreateError] = useState("");
 
-  const toggleMenu = () => setMenuOpen(!menuOpen);
-  const toggleSubmenu = () => setSubmenuOpen(!submenuOpen);
+  // helper pro Authorization header
+  function authHeader() {
+    return `Basic ${btoa(`${user.login}:${user.password}`)}`;
+  }
 
-  const nextCard = () => setCurrentCard((prev) => (prev + 1) % (cards.length + 1));
-  const prevCard = () => setCurrentCard((prev) => (prev - 1 + (cards.length + 1)) % (cards.length + 1));
+  // když nejsi přihlášený, vrať tě na login
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
+  // načti dashboard data (klient, karty, transakce)
+  useEffect(() => {
+    if (!user) return;
+
+    async function load() {
+      try {
+        const headers = { Authorization: authHeader() };
+
+        const [clientRes, cardsRes, txRes] = await Promise.all([
+          fetch("http://localhost:5000/api/client/me", { headers }),
+          fetch("http://localhost:5000/api/cards/me", { headers }),
+          fetch("http://localhost:5000/api/transactions/me", { headers }),
+        ]);
+
+        // pokud už neplatná autorizace → odhlásit
+        if (
+          clientRes.status === 401 ||
+          cardsRes.status === 401 ||
+          txRes.status === 401
+        ) {
+          setUser(null);
+          navigate("/login");
+          return;
+        }
+
+        const clientData = await clientRes.json();
+        const cardsData = await cardsRes.json();
+        const txData = await txRes.json();
+
+        setClient(clientData);
+        setCards(cardsData);
+        setTransactions(txData);
+      } catch (err) {
+        console.error("Chyba při načítání dashboardu:", err);
+      }
+    }
+
+    load();
+  }, [user, navigate, setUser]);
+
+  // vytvoření nové karty
+  async function handleConfirmCreateCard() {
+    setCreateError("");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/cards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader(),
+        },
+        body: JSON.stringify({ cardType: newCardType }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCreateError(data.error || "Nepodařilo se vytvořit kartu");
+        return;
+      }
+
+      // backend nám vrátil novou kartu (cardNumber, cvv, endDate, balance, cardType)
+      // přidáme ji do seznamu, aby se hned zobrazila
+      const newCard = {
+        id: data.id,
+        cardNumber: data.cardNumber,
+        cvv: data.cvv,
+        endDate: data.endDate,
+        balance: data.balance,
+        cardType: data.cardType,
+      };
+      setCards((prev) => [...prev, newCard]);
+
+      // zavřeme modal
+      setShowCreateCard(false);
+    } catch (err) {
+      console.error("Chyba při vytváření karty:", err);
+      setCreateError("Chyba při vytváření karty");
+    }
+  }
+
+  // helper pro hezké datum transakcí
+  function formatDateTime(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+  }
+
+  // odhlášení
+  function handleLogout() {
+    setUser(null);
+    navigate("/", { replace: true });
+  }
+
+  console.log("DASHBOARD USER =", user);
 
   return (
-    <div className="dashboard-wrapper">
-      {/* Tlačítko menu */}
-      <div className="menu-btn" onClick={toggleMenu}>&#9776;</div>
-
-      {/* Boční menu */}
-      <div className={`sidebar ${menuOpen ? 'open' : ''}`}>
-        <button className="closebtn" onClick={toggleMenu}>&times;</button>
-
-        <a href="#analytics">Analytika</a>
-
-        <button className="submenu-toggle" onClick={toggleSubmenu}>
-          Nastavení bezpečnosti
-        </button>
-        {submenuOpen && (
-          <div className="submenu">
-            <a href="#edit-name">Změnit jméno</a>
-            <a href="#change-password">Změnit heslo</a>
-            <a href="#change-login">Změnit login</a>
-            <a href="#change-address">Změnit adresu</a>
-            <a href="#change-phone">Změnit telefon</a>
-            <a href="#change-birthdate">Změnit datum narození</a>
-            <a href="#change-client-type">Změnit typ klienta</a>
-            <a href="#change-passport">Změnit číslo pasu</a>
+    <div className="dashboard-page">
+      {/* HEADER BAR */}
+      <div className="dashboard-header">
+        <div>
+          <h2 className="dashboard-heading">Můj účet</h2>
+          <div className="dashboard-subtitle">
+            {client ? client.fullName : ""}
           </div>
-        )}
+        </div>
 
-        <a href="#replenish">Dobít účet</a>
-        <a href="#transfer">Převod peněz</a>
-        <a href="#mobile">Dobít mobil</a>
-        <a href="#credit">Žádost o kredit</a>
-        <a href="#repayCredit">Splatit kredit</a>
+        <button onClick={handleLogout} className="logout-btn">
+          Odhlásit se
+        </button>
       </div>
 
-      <div className="container">
-        {/* Odhlášení */}
-        <div className="logout-container">
-          <span className="logout-icon">⎋</span>
-        </div>
+      {/* LAYOUT */}
+      <div className="dashboard-content">
+        {/* LEVÁ ČÁST */}
+        <div className="left-side">
+          {/* INFO O KLIENTOVI */}
+          <section className="client-info-box card">
+            <h3 className="section-title">Informace o klientovi</h3>
 
-        {/* Klientská informace */}
-        <div className="section">
-          <h2>Informace o klientovi</h2>
-          <div className="info-grid">
-            <div className="info-item"><strong>Jméno:</strong> Ivan Ivanov</div>
-            <div className="info-item"><strong>Telefon:</strong> +420 123 456 789</div>
-            <div className="info-item"><strong>Adresa:</strong> Praha, Česká republika</div>
-            <div className="info-item"><strong>Číslo pasu:</strong> AB123456</div>
-            <div className="info-item"><strong>Typ klienta:</strong> Premium</div>
-          </div>
-        </div>
-
-        {/* Bankovní karty */}
-        <div className="section">
-          <h2>Bankovní karty</h2>
-
-          <div className="cards-container-wrapper">
-            <button className="arrow" onClick={prevCard}>◀</button>
-
-            <div className="cards-container">
-              {cards.map((card, index) => (
-                <div key={index} className={`card ${currentCard === index ? 'active' : ''}`}>
-                  <div className="card-number">{card.number}</div>
-                  <div className="card-holder">
-                    <div><strong>CVV:</strong> {card.cvv}</div>
-                    <div><strong>Platnost:</strong> {card.endDate}</div>
-                  </div>
-                  <div className="card-balance"><strong>Zůstatek:</strong> {card.balance}</div>
-                  <div className="card-type">{card.type}</div>
+            {!client ? (
+              <p>Načítám údaje…</p>
+            ) : (
+              <div className="client-grid">
+                <div>
+                  <strong>Jméno:</strong> {client.fullName || "—"}
                 </div>
-              ))}
-
-              {/* Přidat novou kartu */}
-              <div className={`card add-card ${currentCard === cards.length ? 'active' : ''}`}>
-                <span>+</span>
+                <div>
+                  <strong>Telefon:</strong> {client.phone || "—"}
+                </div>
+                <div>
+                  <strong>Adresa:</strong> {client.address || "—"}
+                </div>
+                <div>
+                  <strong>Doklad:</strong> {client.passportNumber || "—"}
+                </div>
+                <div>
+                  <strong>Typ klienta:</strong> {client.clientType || "—"}
+                </div>
+                <div>
+                  <strong>Celkem peněz:</strong> {client.totalBalance} UAH
+                </div>
+                <div>
+                  <strong>Login:</strong> {client.login}
+                </div>
               </div>
+            )}
+          </section>
+
+          {/* KARTY */}
+          <section className="cards-box card">
+            <div className="cards-header">
+              <h3 className="section-title no-margin">Moje karty</h3>
+
+              <button
+                onClick={() => {
+                  setCreateError("");
+                  setNewCardType("DEBIT");
+                  setShowCreateCard(true);
+                }}
+                className="create-card-btn"
+              >
+                Vytvořit kartu
+              </button>
             </div>
 
-            <button className="arrow" onClick={nextCard}>▶</button>
-          </div>
+            {cards.length === 0 ? (
+              <div className="cards-empty">
+                Zatím nemáš žádnou kartu.
+              </div>
+            ) : (
+              <div className="cards-list">
+                {cards.map((card) => (
+                  <div key={card.id} className="bank-card">
+                    <div className="bank-card-number">
+                      {card.cardNumber}
+                    </div>
+
+                    <div className="bank-card-row">
+                      <div>
+                        <strong>CVV:</strong> {card.cvv}
+                      </div>
+                      <div>
+                        <strong>Platnost:</strong> {card.endDate}
+                      </div>
+                    </div>
+
+                    <div className="bank-card-balance">
+                      <strong>Balanc:</strong> {card.balance} UAH
+                    </div>
+
+                    <div className="bank-card-type">{card.cardType}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Poslední transakce */}
-        <div className="transactions-container">
-          <h2>Poslední transakce</h2>
-          <div className="transactions-list">
-            {transactions.map((t, idx) => (
-              <div key={idx} className="transaction-item">
-                <div><strong>Odesílatel:</strong> {t.sender}</div>
-                <div><strong>Příjemce:</strong> {t.receiver}</div>
-                <div><strong>Částka:</strong> {t.amount}</div>
-                <div><strong>Poznámka:</strong> {t.note}</div>
-                <div><strong>Datum:</strong> {t.date}</div>
-              </div>
-            ))}
-          </div>
+        {/* PRAVÁ ČÁST */}
+        <div className="right-side">
+          <section className="transactions-box card">
+            <h3 className="section-title center">Poslední transakce</h3>
+
+            <div className="transactions-scroll">
+              {transactions.length === 0 ? (
+                <div className="transactions-empty">
+                  Žádné transakce.
+                </div>
+              ) : (
+                transactions.map((tx) => (
+                  <div key={tx.id} className="transaction-card">
+                    <div>
+                      <strong>Od:</strong> {tx.sender}
+                    </div>
+                    <div>
+                      <strong>Komu:</strong> {tx.receiver}
+                    </div>
+                    <div>
+                      <strong>Suma:</strong> {tx.amount} ₴
+                    </div>
+                    <div>
+                      <strong>Poznámka:</strong> {tx.note || "—"}
+                    </div>
+                    <div>
+                      <strong>Datum:</strong>{" "}
+                      {formatDateTime(tx.transactionDate)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
       </div>
+
+      {/* MODAL */}
+      {showCreateCard && (
+        <div
+          className="create-card-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="create-card-modal">
+            <h3 className="modal-title">Vytvořit kartu</h3>
+
+            <label className="modal-label">
+              Typ karty:
+            </label>
+            <select
+              value={newCardType}
+              onChange={(e) => setNewCardType(e.target.value)}
+              className="modal-select"
+            >
+              <option value="DEBIT">DEBIT</option>
+              <option value="CREDIT">CREDIT</option>
+            </select>
+
+            {createError && (
+              <div className="modal-error">{createError}</div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                onClick={() => setShowCreateCard(false)}
+                className="btn-cancel"
+              >
+                Zrušit
+              </button>
+
+              <button
+                onClick={handleConfirmCreateCard}
+                className="btn-confirm"
+              >
+                Potvrdit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default Dashboard;

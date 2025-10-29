@@ -1,178 +1,299 @@
-/* Obecný wrapper */
-.dashboard-wrapper {
-  font-family: Arial, sans-serif;
+/* PAGE LAYOUT */
+.dashboard-page {
+  padding: 2rem;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #1a1a1a;
+
+  /* ✅ Gradient pozadí */
+  background: linear-gradient(135deg, #e6d4f6, #fbd5d5);
+  min-height: 100vh;
+
+  box-sizing: border-box;
   display: flex;
+  flex-direction: column;
 }
 
-/* Tlačítko menu */
-.menu-btn {
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  font-size: 24px;
+/* HEADER */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.dashboard-heading {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.dashboard-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.logout-btn {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
   cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+.logout-btn:hover {
+  background: #f4f4f4;
+}
+
+/* GRID LAYOUT */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+@media (max-width: 900px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* CARD WRAPPER */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* SECTIONS */
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #111;
+}
+.section-title.no-margin {
+  margin-bottom: 0;
+}
+.section-title.center {
+  text-align: center;
+}
+
+/* KLIENT GRID */
+.client-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 0.5rem;
+  column-gap: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+@media (max-width: 480px) {
+  .client-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* KARTY */
+.cards-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.create-card-btn {
+  background-color: #ff5f5f;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+.create-card-btn:hover {
+  background-color: #ff4a4a;
+}
+
+.cards-empty {
+  padding: 1rem;
+  border: 1px dashed #bbb;
+  border-radius: 8px;
+  color: #666;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9rem;
+  background: #fafafa;
+}
+
+.cards-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.bank-card {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.bank-card-number {
+  font-size: 1rem;
+  letter-spacing: 2px;
+  font-family: monospace;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  word-spacing: 4px;
+}
+
+.bank-card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.bank-card-balance {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.75rem;
+  color: #fff;
+}
+
+.bank-card-type {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  opacity: 0.8;
+}
+
+/* TRANSAKCE */
+.transactions-box {
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.transactions-scroll {
+  overflow-y: auto;
+  display: grid;
+  gap: 1rem;
+  font-size: 0.9rem;
+  padding-right: 0.5rem;
+}
+
+.transactions-empty {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.transaction-card {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  line-height: 1.4;
+  border: 1px solid #eee;
+}
+
+/* MODAL */
+.create-card-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
   z-index: 1000;
 }
 
-/* Sidebar */
-.sidebar {
-  height: 100%;
-  width: 0;
-  position: fixed;
-  top: 0;
-  left: 0;
-  background-color: #001529;
-  overflow-x: hidden;
-  transition: 0.3s;
-  padding-top: 60px;
-  color: white;
+.create-card-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
-.sidebar.open {
-  width: 250px;
-}
-
-.sidebar a,
-.sidebar button {
-  padding: 10px 20px;
-  text-decoration: none;
-  display: block;
-  color: white;
-  background: none;
-  border: none;
+.modal-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111;
   text-align: left;
-  cursor: pointer;
 }
 
-.sidebar a:hover,
-.sidebar button:hover {
-  background-color: #1890ff;
+.modal-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #222;
 }
 
-.closebtn {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 30px;
-  border: none;
-  background: none;
-  color: white;
-  cursor: pointer;
+.modal-select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+.modal-select:focus {
+  border-color: #6c47ff;
+  box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.15);
 }
 
-.submenu {
-  padding-left: 15px;
-  background-color: #0a2a50;
+.modal-error {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
 }
 
-/* Obsah */
-.container {
-  margin-left: 60px;
-  padding: 20px;
-  flex: 1;
-}
-
-/* Logout ikona */
-.logout-container {
+.modal-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 20px;
+  gap: 0.5rem;
 }
 
-.logout-icon {
-  font-size: 20px;
-  cursor: pointer;
-}
-
-/* Sekce */
-.section {
-  margin-bottom: 40px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-
-/* Karty */
-.cards-container-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-.cards-container {
-  display: flex;
-  overflow: hidden;
-  width: 300px;
-  justify-content: center;
-}
-
-.card {
-  min-width: 280px;
-  padding: 15px;
-  margin: 0 10px;
-  border-radius: 8px;
-  background-color: #f5f5f5;
-  text-align: center;
-  display: none;
-}
-
-.card.active {
-  display: block;
-}
-
-.card-number {
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.card-holder {
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.card-balance {
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.card-type {
-  font-style: italic;
-  color: #555;
-}
-
-.add-card {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 28px;
-  cursor: pointer;
-  background-color: #e0e0e0;
-}
-
-/* Šipky */
-.arrow {
-  font-size: 20px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: #333;
-}
-
-/* Transakce */
-.transactions-container {
-  margin-top: 20px;
-}
-
-.transactions-list {
-  display: grid;
-  gap: 15px;
-}
-
-.transaction-item {
-  border: 1px solid #ddd;
-  padding: 10px;
+.btn-cancel {
+  background: white;
+  border: 1px solid #ccc;
   border-radius: 6px;
-  background-color: #fafafa;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+.btn-cancel:hover {
+  background: #f4f4f4;
+}
+
+.btn-confirm {
+  background: #6c47ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.btn-confirm:hover {
+  background: #5a3fe0;
 }
