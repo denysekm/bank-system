@@ -5,8 +5,8 @@ import { pool } from "../db.js";
 const router = Router();
 
 /**
- * POST /api/auth/register
- * Vytvoří nového klienta + bankovní účet
+  POST /api/auth/register
+  Vytvoří nového klienta + bankovní účet
  */
 router.post("/register", async (req, res) => {
   const conn = await pool.getConnection();

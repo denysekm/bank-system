@@ -14,7 +14,8 @@ export default function Dashboard() {
 
   // vytvoření karty
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [newCardType, setNewCardType] = useState("DEBIT"); // UI: DEBIT/CREDIT
+  const [newCardType, setNewCardType] = useState("DEBIT"); // DEBIT/CREDIT
+  const [newCardBrand, setNewCardBrand] = useState("VISA");  // VISA / MASTERCARD
   const [createError, setCreateError] = useState("");
 
   // nové: stavy pro operace s kartami
@@ -73,45 +74,67 @@ export default function Dashboard() {
   useEffect(() => { reload(); }, [reload]);
 
   // vytvoření nové karty
-  async function handleConfirmCreateCard() {
-    setCreateError("");
-    setMsg(""); setErr("");
-    try {
-      // Backend očekává lokalizované hodnoty ("debetní" / "kreditní")
-      const localized = newCardType === "CREDIT" ? "kreditní" : "debetní";
+ async function handleConfirmCreateCard() {
+  setCreateError("");
+  setMsg("");
+  setErr("");
 
-      const res = await fetch("http://localhost:5000/api/cards", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader(),
-        },
-        body: JSON.stringify({ cardType: localized }),
-      });
+  // 1) Převod typu z interního (DEBIT/CREDIT) na lokalizovaný (debetní/kreditní)
+  const localizedType = newCardType === "CREDIT" ? "kreditní" : "debetní";
 
-      const data = await res.json();
-      if (!res.ok) {
-        setCreateError(data.error || "Nepodařilo se vytvořit kartu");
-        return;
-      }
+  // 2) Lokální kontrola – jen jedna debetní karta
+  if (localizedType === "debetní") {
+    const hasDebit = cards.some(
+      (c) =>
+        c.cardType &&
+        c.cardType.toLowerCase().startsWith("debet") // "debetní"
+    );
 
-      // přidej novou kartu do stavu a zavři modal
-      const newCard = {
-        id: data.id,
-        cardNumber: data.cardNumber,
-        cvv: data.cvv,
-        endDate: data.endDate,
-        balance: data.balance,
-        cardType: data.cardType,
-      };
-      setCards((prev) => [...prev, newCard]);
-      setShowCreateCard(false);
-      setMsg("Karta byla vytvořena.");
-    } catch (e) {
-      console.error("Chyba při vytváření karty:", e);
-      setCreateError("Chyba při vytváření karty");
+    if (hasDebit) {
+      setCreateError("Už máte debetní kartu");
+      return;
     }
   }
+
+  try {
+    const res = await fetch("http://localhost:5000/api/cards", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader(),
+      },
+      body: JSON.stringify({
+        cardType: localizedType,
+        brand: newCardBrand, // "VISA" nebo "MASTERCARD"
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setCreateError(data.error || "Nepodařilo se vytvořit kartu");
+      return;
+    }
+
+    // přidej novou kartu do stavu a zavři modal
+    const newCard = {
+      id: data.id,
+      cardNumber: data.cardNumber,
+      cvv: data.cvv,
+      endDate: data.endDate,
+      balance: data.balance,
+      cardType: data.cardType,
+      brand: data.brand,
+    };
+
+    setCards((prev) => [...prev, newCard]);
+    setShowCreateCard(false);
+    setMsg("Karta byla vytvořena.");
+  } catch (e) {
+    console.error("Chyba při vytváření karty:", e);
+    setCreateError("Chyba při vytváření karty");
+  }
+}
+
 
   // helper pro hezké datum transakcí
   function formatDateTime(ts) {
@@ -222,6 +245,7 @@ export default function Dashboard() {
                 onClick={() => {
                   setCreateError("");
                   setNewCardType("DEBIT");
+                  setNewCardBrand("VISA");
                   setShowCreateCard(true);
                 }}
                 className="create-card-btn"
@@ -247,7 +271,10 @@ export default function Dashboard() {
                       <strong>Balanc:</strong> {card.balance} UAH
                     </div>
 
-                    <div className="bank-card-type">{card.cardType}</div>
+                    <div className="bank-card-type">
+                      {card.cardType}
+                      {card.brand ? ` • ${card.brand}` : null}
+                  </div>
                   </div>
                 ))}
               </div>
@@ -259,31 +286,7 @@ export default function Dashboard() {
             <h3 className="section-title">Operace s kartami</h3>
 
             <div className="card-actions-grid">
-              {/* Dobití */}
-              <form onSubmit={submitRepl} className="card-action-form">
-                <h4>Dobít kartu</h4>
-                <input
-                  name="card"
-                  placeholder="Číslo karty"
-                  value={repl.card}
-                  onChange={onRepl}
-                />
-                <input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Částka"
-                  value={repl.amount}
-                  onChange={onRepl}
-                />
-                <input
-                  name="paymentMethod"
-                  placeholder="Metoda (např. CARD)"
-                  value={repl.paymentMethod}
-                  onChange={onRepl}
-                />
-                <button className="btn-confirm">Dobít</button>
-              </form>
+              
 
               {/* Karta → karta */}
               <form onSubmit={submitCc} className="card-action-form">
@@ -317,31 +320,6 @@ export default function Dashboard() {
                 <button className="btn-confirm">Převést</button>
               </form>
 
-              {/* Na telefon */}
-              <form onSubmit={submitMob} className="card-action-form">
-                <h4>Převod na telefon</h4>
-                <input
-                  name="fromCard"
-                  placeholder="Z karty"
-                  value={mob.fromCard}
-                  onChange={onMob}
-                />
-                <input
-                  name="phone"
-                  placeholder="Telefon"
-                  value={mob.phone}
-                  onChange={onMob}
-                />
-                <input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Částka"
-                  value={mob.amount}
-                  onChange={onMob}
-                />
-                <button className="btn-confirm">Odeslat</button>
-              </form>
             </div>
 
             {(msg || err) && (
@@ -389,11 +367,23 @@ export default function Dashboard() {
               onChange={(e) => setNewCardType(e.target.value)}
               className="modal-select"
             >
-              <option value="DEBIT">DEBIT</option>
-              <option value="CREDIT">CREDIT</option>
+              <option value="debetní">debetní</option>
+              <option value="kreditní">kreditní</option>
             </select>
 
-            {createError && (<div className="modal-error">{createError}</div>)}
+            <label className="modal-label">Značka karty:</label>
+            <select
+              value={newCardBrand}
+              onChange={(e) => setNewCardBrand(e.target.value)}
+              className="modal-select"
+            >
+              <option value="VISA">Visa</option>
+              <option value="MASTERCARD">Mastercard</option>
+            </select>
+
+            {createError && (
+              <div className="modal-error">{createError}</div>
+            )}
 
             <div className="modal-actions">
               <button onClick={() => setShowCreateCard(false)} className="btn-cancel">

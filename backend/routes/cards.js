@@ -42,6 +42,7 @@ router.get("/me", requireAuth, async (req, res) => {
       endDate: card.EndDate,
       balance: Number(card.Balance).toFixed(2),
       cardType: card.CardType,
+      brand: card.Brand,
     }));
 
     res.json(cards);
@@ -55,26 +56,75 @@ router.get("/me", requireAuth, async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const accountId = req.user.id; // bank_account.ID
-    const { cardType } = req.body || {};
+    const { cardType, brand } = req.body || {};
 
-    // dovolíme jen DEBIT nebo CREDIT (lokalizovaně)
-    const finalType = cardType === "kreditní" ? "kreditní" : "debetní";
+    // -------------------------------
+    // 1) Validace a normalizace typu karty
+    // -------------------------------
+    let finalType;
+    if (cardType === "debetní" || cardType === "DEBIT") {
+      finalType = "debetní";
+    } else if (cardType === "kreditní" || cardType === "CREDIT") {
+      finalType = "kreditní";
+    } else {
+      return res.status(400).json({ error: "Neplatný typ karty" });
+    }
 
+    // -------------------------------
+    // 2) Validace a normalizace brandu
+    // -------------------------------
+    let finalBrand;
+    if (brand === "VISA" || brand === "Visa") {
+      finalBrand = "VISA";
+    } else if (brand === "MASTERCARD" || brand === "Mastercard") {
+      finalBrand = "MASTERCARD";
+    } else {
+      return res.status(400).json({ error: "Neplatná značka karty" });
+    }
+
+    // -------------------------------
+    // 3) Limit: pouze jedna debetní karta na uživatele
+    // -------------------------------
+    if (finalType === "debetní") {
+      const [rows] = await pool.query(
+        `SELECT COUNT(*) AS cnt
+         FROM bank_card
+         WHERE BankAccountID = ? AND CardType = 'debetní'`,
+        [accountId]
+      );
+
+      if (rows[0].cnt >= 1) {
+        return res.status(400).json({ error: "Už máte debetní kartu" });
+      }
+    }
+    // 4) Bonus: 1000 Kč za vytvoření debetní karty
+  
+    let initialBalance = 0.0;
+    if (finalType === "debetní") {
+      initialBalance = 1000.0; // 💰 bonus za založení debetní karty
+    }
+
+    // 5) Generování údajů pro novou kartu
+   
     const cardNumber = await generateUniqueCardNumber();
     const cvv = randomDigits(3);
 
-    // expirace = dnes + 5 let
+    // expirace = +5 let
     const endDateObj = new Date();
     endDateObj.setFullYear(endDateObj.getFullYear() + 5);
     const endDateSql = endDateObj.toISOString().slice(0, 10); // YYYY-MM-DD
 
+    // 6) Uložení nové karty do databáze
+    
     const [result] = await pool.query(
       `INSERT INTO bank_card
-        (BankAccountID, CardNumber, CVV, EndDate, CardType, Balance)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [accountId, cardNumber, cvv, endDateSql, finalType, 0.0]
+        (BankAccountID, CardNumber, CVV, EndDate, CardType, Brand, Balance)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [accountId, cardNumber, cvv, endDateSql, finalType, finalBrand, 0.0]
     );
 
+    // 7) Odpověď pro frontend
+   
     res.status(201).json({
       id: result.insertId,
       cardNumber,
@@ -82,12 +132,15 @@ router.post("/", requireAuth, async (req, res) => {
       endDate: endDateSql,
       balance: "0.00",
       cardType: finalType,
+      brand: finalBrand
     });
+
   } catch (err) {
     console.error("POST /api/cards error:", err);
     res.status(500).json({ error: "Server error při vytváření karty" });
   }
 });
+
 
 //
 // --- DOPLNĚNÉ AKCE: DOBITÍ / PŘEVOD / MOBIL ---
