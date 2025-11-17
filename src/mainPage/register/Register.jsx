@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
+import { api } from "../../lib/api";
+
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -29,10 +31,7 @@ function Register() {
     if (!formData.login) newErrors.login = "Pole je povinné";
     if (!formData.password) newErrors.password = "Pole je povinné";
 
-    if (
-      formData.phone &&
-      !/^\+420\d{9}$/.test(formData.phone)
-    ) {
+    if (formData.phone && !/^\+420\d{9}$/.test(formData.phone)) {
       newErrors.phone = "Zadej telefon ve formátu +420XXXXXXXXX";
     }
 
@@ -58,40 +57,33 @@ function Register() {
 
     setLoading(true);
 
-    // namapování clientType z textu v UI na hodnotu do DB
-    
-
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          login: formData.login,
-          password: formData.password,
-          fullName: formData.fullName,
-          birthDate: formData.birthDate, // YYYY-MM-DD už z input type="date"
-          passportNumber: formData.passportNumber,
-          address: formData.address || null,
-          phone: formData.phone || null,
-          clientType: formData.clientType,
-        }),
+      const res = await api.post("/auth/register", {
+        login: formData.login,
+        password: formData.password,
+        fullName: formData.fullName,
+        birthDate: formData.birthDate, // YYYY-MM-DD z input type="date"
+        passportNumber: formData.passportNumber,
+        address: formData.address || null,
+        phone: formData.phone || null,
+        clientType: formData.clientType,
       });
 
-      const data = await res.json();
+      const data = res.data;
 
-      if (!res.ok) {
-        // backend nám poslal chybu (např. duplicitní PassportNumber)
-        alert(data.error || "Registrace selhala.");
-      } else if (data?.ok) {
+      if (data?.ok) {
         alert("Registrace proběhla úspěšně.");
         navigate("/login");
       } else {
-        // neočekávaná odpověď
         alert("Něco se pokazilo při registraci.");
       }
     } catch (err) {
       console.error("Chyba při registraci:", err);
-      alert("Chyba spojení se serverem.");
+      if (err.response) {
+        alert(err.response.data?.error || "Registrace selhala.");
+      } else {
+        alert("Chyba spojení se serverem.");
+      }
     } finally {
       setLoading(false);
     }

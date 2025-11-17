@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../AuthContext";
 import "./Login.css";
+import { api } from "../../lib/api";
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,21 +35,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password }),
+      // ⬇️ místo fetch používáme axios "api"
+      const res = await api.post("/auth/login", {
+        login,
+        password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrors({
-          form: data.error || "Přihlášení selhalo",
-        });
-        setLoading(false);
-        return;
-      }
+      const data = res.data;
 
       // uložíme přihlášeného uživatele do kontextu
       setUser({
@@ -60,14 +54,30 @@ export default function Login() {
 
       // přejdeme na dashboard
       navigate("/dashboard");
-    } catch (err) {
+    }    catch (err) {
       console.error("Login error:", err);
-      setErrors({
-        form: "Chyba spojení se serverem",
-      });
+
+      if (err.response) {
+        console.log("Login response status:", err.response.status);
+        console.log("Login response data:", err.response.data);
+
+        const serverMsg =
+          (typeof err.response.data === "string"
+            ? err.response.data
+            : err.response.data?.error) || "";
+
+        setErrors({
+          form: serverMsg || `Přihlášení selhalo (kód ${err.response.status})`,
+        });
+      } else {
+        setErrors({
+          form: "Chyba spojení se serverem",
+        });
+      }
     } finally {
       setLoading(false);
     }
+
   }
 
   return (

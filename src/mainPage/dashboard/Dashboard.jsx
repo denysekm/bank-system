@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
+import { api } from "../../lib/api";
+  // ⬅️ axios instance s REACT_APP_API_URL
 
 export default function Dashboard() {
   const { user, setUser } = useAuth();
@@ -14,7 +16,7 @@ export default function Dashboard() {
 
   // vytvoření karty
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [newCardType, setNewCardType] = useState("DEBIT"); // DEBIT/CREDIT
+  const [newCardType, setNewCardType] = useState("DEBIT"); // DEBIT/CREDIT nebo "debetní"/"kreditní"
   const [newCardBrand, setNewCardBrand] = useState("VISA");  // VISA / MASTERCARD
   const [createError, setCreateError] = useState("");
 
@@ -41,100 +43,96 @@ export default function Dashboard() {
     }
   }, [user, navigate]);
 
-  // načtení dashboard dat
+  // načtení dashboard dat – PŘEPSÁNO NA axios api
   const reload = useCallback(async () => {
     if (!user) return;
     try {
       const headers = { Authorization: authHeader() };
 
       const [clientRes, cardsRes, txRes] = await Promise.all([
-        fetch("http://localhost:5000/api/client/me", { headers }),
-        fetch("http://localhost:5000/api/cards/me", { headers }),
-        fetch("http://localhost:5000/api/transactions/me", { headers }),
+        api.get("/client/me", { headers }),
+        api.get("/cards/me", { headers }),
+        api.get("/transactions/me", { headers }),
       ]);
 
-      if (clientRes.status === 401 || cardsRes.status === 401 || txRes.status === 401) {
+      setClient(clientRes.data);
+      setCards(cardsRes.data);
+      setTransactions(txRes.data);
+    } catch (e) {
+      // pokud je to 401 → odhlásit a na login
+      if (e.response && e.response.status === 401) {
         setUser(null);
         navigate("/login");
         return;
       }
-
-      const clientData = await clientRes.json();
-      const cardsData  = await cardsRes.json();
-      const txData     = await txRes.json();
-
-      setClient(clientData);
-      setCards(cardsData);
-      setTransactions(txData);
-    } catch (e) {
       console.error("Chyba při načítání dashboardu:", e);
     }
   }, [user, navigate, setUser, authHeader]);
 
   useEffect(() => { reload(); }, [reload]);
 
-  // vytvoření nové karty
- async function handleConfirmCreateCard() {
-  setCreateError("");
-  setMsg("");
-  setErr("");
+  // vytvoření nové karty – PŘEPSÁNO NA axios api
+  async function handleConfirmCreateCard() {
+    setCreateError("");
+    setMsg("");
+    setErr("");
 
-  // 1) Převod typu z interního (DEBIT/CREDIT) na lokalizovaný (debetní/kreditní)
-  const localizedType = newCardType === "CREDIT" ? "kreditní" : "debetní";
+    // Převod typu na lokalizovaný (debetní/kreditní) – bereme v potaz obě varianty
+    const localizedType =
+      newCardType === "CREDIT" || newCardType === "kreditní"
+        ? "kreditní"
+        : "debetní";
 
-  // 2) Lokální kontrola – jen jedna debetní karta
-  if (localizedType === "debetní") {
-    const hasDebit = cards.some(
-      (c) =>
-        c.cardType &&
-        c.cardType.toLowerCase().startsWith("debet") // "debetní"
-    );
+    // Lokální kontrola – jen jedna debetní karta
+    if (localizedType === "debetní") {
+      const hasDebit = cards.some(
+        (c) =>
+          c.cardType &&
+          c.cardType.toLowerCase().startsWith("debet") // "debetní"
+      );
 
-    if (hasDebit) {
-      setCreateError("Už máte debetní kartu");
-      return;
-    }
-  }
-
-  try {
-    const res = await fetch("http://localhost:5000/api/cards", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader(),
-      },
-      body: JSON.stringify({
-        cardType: localizedType,
-        brand: newCardBrand, // "VISA" nebo "MASTERCARD"
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      setCreateError(data.error || "Nepodařilo se vytvořit kartu");
-      return;
+      if (hasDebit) {
+        setCreateError("Už máte debetní kartu");
+        return;
+      }
     }
 
-    // přidej novou kartu do stavu a zavři modal
-    const newCard = {
-      id: data.id,
-      cardNumber: data.cardNumber,
-      cvv: data.cvv,
-      endDate: data.endDate,
-      balance: data.balance,
-      cardType: data.cardType,
-      brand: data.brand,
-    };
+    try {
+      const res = await api.post(
+        "/cards",
+        {
+          cardType: localizedType,
+          brand: newCardBrand, // "VISA" nebo "MASTERCARD"
+        },
+        {
+          headers: {
+            Authorization: authHeader(),
+          },
+        }
+      );
 
-    setCards((prev) => [...prev, newCard]);
-    setShowCreateCard(false);
-    setMsg("Karta byla vytvořena.");
-  } catch (e) {
-    console.error("Chyba při vytváření karty:", e);
-    setCreateError("Chyba při vytváření karty");
+      const data = res.data;
+
+      // přidej novou kartu do stavu a zavři modal
+      const newCard = {
+        id: data.id,
+        cardNumber: data.cardNumber,
+        cvv: data.cvv,
+        endDate: data.endDate,
+        balance: data.balance,
+        cardType: data.cardType,
+        brand: data.brand,
+      };
+
+      setCards((prev) => [...prev, newCard]);
+      setShowCreateCard(false);
+      setMsg("Karta byla vytvořena.");
+    } catch (e) {
+      console.error("Chyba při vytváření karty:", e);
+      const message = e.response?.data?.error || "Chyba při vytváření karty";
+      setCreateError(message);
+    }
   }
-}
-
 
   // helper pro hezké datum transakcí
   function formatDateTime(ts) {
@@ -159,23 +157,32 @@ export default function Dashboard() {
   const onCc   = (e) => setCc((s)   => ({ ...s, [e.target.name]: e.target.value }));
   const onMob  = (e) => setMob((s)  => ({ ...s, [e.target.name]: e.target.value }));
 
-  // odeslání operací
+  // odeslání operací – PŘEPSÁNO NA axios api
   async function doPost(path, body, okText) {
-    setMsg(""); setErr("");
+    setMsg("");
+    setErr("");
     try {
-      const res = await fetch(`http://localhost:5000/api/cards/${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: authHeader() },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
+      const res = await api.post(
+        `/cards/${path}`,
+        body,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader(),
+          },
+        }
+      );
+
+      const data = res.data || {};
+      if (data.ok === false) {
         throw new Error(data.error || "REQUEST_FAILED");
       }
+
       setMsg(okText);
       await reload(); // aktualizuj zůstatky a transakce
     } catch (e) {
-      setErr(e.message);
+      const message = e.response?.data?.error || e.message || "REQUEST_FAILED";
+      setErr(message);
     }
   }
 
@@ -274,20 +281,18 @@ export default function Dashboard() {
                     <div className="bank-card-type">
                       {card.cardType}
                       {card.brand ? ` • ${card.brand}` : null}
-                  </div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          {/* NOVÉ: Operace s kartami */}
+          {/* Operace s kartami */}
           <section className="card card-actions-box">
             <h3 className="section-title">Operace s kartami</h3>
 
             <div className="card-actions-grid">
-              
-
               {/* Karta → karta */}
               <form onSubmit={submitCc} className="card-action-form">
                 <h4>Převod karta → karta</h4>
@@ -319,7 +324,6 @@ export default function Dashboard() {
                 />
                 <button className="btn-confirm">Převést</button>
               </form>
-
             </div>
 
             {(msg || err) && (
