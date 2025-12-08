@@ -3,117 +3,130 @@ import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import { api } from "../../lib/api";
-  // ⬅️ axios instance s REACT_APP_API_URL
 
 export default function Dashboard() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
-  // data o klientovi a účtu
   const [client, setClient] = useState(null);
   const [cards, setCards] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [childrenAccounts, setChildrenAccounts] = useState([]);
 
-  // vytvoření karty
+  const [loading, setLoading] = useState(true);
+  const [globalError, setGlobalError] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
+
   const [showCreateCard, setShowCreateCard] = useState(false);
-  const [newCardType, setNewCardType] = useState("DEBIT"); // DEBIT/CREDIT nebo "debetní"/"kreditní"
-  const [newCardBrand, setNewCardBrand] = useState("VISA");  // VISA / MASTERCARD
-  const [createError, setCreateError] = useState("");
+  const [newCardType, setNewCardType] = useState("debetní");
+  const [newCardBrand, setNewCardBrand] = useState("VISA");
+  const [createCardError, setCreateCardError] = useState("");
 
-  // nové: stavy pro operace s kartami
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
+  const [showChildModal, setShowChildModal] = useState(false);
+  const [childForm, setChildForm] = useState({
+    fullName: "",
+    birthNumber: "",
+    email: "",
+  });
+  const [childErrors, setChildErrors] = useState({});
+  const [childLoading, setChildLoading] = useState(false);
 
-  const [repl, setRepl] = useState({ card: "", amount: "", paymentMethod: "CARD" });
-  const [cc,   setCc]   = useState({ fromCard: "", toCard: "", amount: "", description: "" });
-  const [mob,  setMob]  = useState({ fromCard: "", phone: "", amount: "" });
+  // změna loginu/hesla (pro dítě po prvním přihlášení)
+  const [credForm, setCredForm] = useState({
+    newLogin: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [credError, setCredError] = useState("");
+  const [credLoading, setCredLoading] = useState(false);
 
-  // bezpečný Authorization header (diakritika)
-  const authHeader = useCallback(() => {
-    if (!user) return "";
+  const buildAuthHeader = useCallback(() => {
+    if (!user) return {};
     const raw = `${user.login}:${user.password}`;
     const safe = btoa(unescape(encodeURIComponent(raw)));
-    return `Basic ${safe}`;
+    return { Authorization: `Basic ${safe}` };
   }, [user]);
 
-  // když nejsi přihlášený, vrať tě na login
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
 
-  // načtení dashboard dat – PŘEPSÁNO NA axios api
-  const reload = useCallback(async () => {
+  const loadDashboard = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
+    setGlobalError("");
     try {
-      const headers = { Authorization: authHeader() };
+      const headers = buildAuthHeader();
 
-      const [clientRes, cardsRes, txRes] = await Promise.all([
+      const [clientRes, cardsRes, txRes, childrenRes] = await Promise.all([
         api.get("/client/me", { headers }),
         api.get("/cards/me", { headers }),
         api.get("/transactions/me", { headers }),
+        api
+          .get("/client/children", { headers })
+          .catch(() => ({ data: [] })),
       ]);
 
-      setClient(clientRes.data);
-      setCards(cardsRes.data);
-      setTransactions(txRes.data);
+      setClient(clientRes.data || null);
+      setCards(cardsRes.data || []);
+      setTransactions(txRes.data || []);
+      setChildrenAccounts(childrenRes.data || []);
     } catch (e) {
-      // pokud je to 401 → odhlásit a na login
+      console.error("Chyba při načítání dashboardu:", e);
       if (e.response && e.response.status === 401) {
         setUser(null);
         navigate("/login");
         return;
       }
-      console.error("Chyba při načítání dashboardu:", e);
+      const msg = e.response?.data?.error || "Chyba při načítání dat.";
+      setGlobalError(msg);
+    } finally {
+      setLoading(false);
     }
-  }, [user, navigate, setUser, authHeader]);
+  }, [user, buildAuthHeader, navigate, setUser]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
-  // vytvoření nové karty – PŘEPSÁNO NA axios api
+  function formatDateTime(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+  }
+
+  function formatCardNumber(cardNumber) {
+    if (!cardNumber) return "";
+    return String(cardNumber)
+      .replace(/\s+/g, "")
+      .replace(/(.{4})/g, "$1 ")
+      .trim();
+  }
+
   async function handleConfirmCreateCard() {
-    setCreateError("");
-    setMsg("");
-    setErr("");
-
-    // Převod typu na lokalizovaný (debetní/kreditní) – bereme v potaz obě varianty
-    const localizedType =
-      newCardType === "CREDIT" || newCardType === "kreditní"
-        ? "kreditní"
-        : "debetní";
-
-    // Lokální kontrola – jen jedna debetní karta
-    if (localizedType === "debetní") {
-      const hasDebit = cards.some(
-        (c) =>
-          c.cardType &&
-          c.cardType.toLowerCase().startsWith("debet") // "debetní"
-      );
-
-      if (hasDebit) {
-        setCreateError("Už máte debetní kartu");
-        return;
-      }
-    }
-
+    if (!user) return;
+    setCreateCardError("");
     try {
+      const headers = buildAuthHeader();
+
       const res = await api.post(
         "/cards",
         {
-          cardType: localizedType,
-          brand: newCardBrand, // "VISA" nebo "MASTERCARD"
+          cardType: newCardType,
+          brand: newCardBrand,
         },
-        {
-          headers: {
-            Authorization: authHeader(),
-          },
-        }
+        { headers }
       );
 
       const data = res.data;
 
-      // přidej novou kartu do stavu a zavři modal
       const newCard = {
         id: data.id,
         cardNumber: data.cardNumber,
@@ -126,132 +139,259 @@ export default function Dashboard() {
 
       setCards((prev) => [...prev, newCard]);
       setShowCreateCard(false);
-      setMsg("Karta byla vytvořena.");
+      setInfoMsg("Karta byla vytvořena.");
     } catch (e) {
       console.error("Chyba při vytváření karty:", e);
-      const message = e.response?.data?.error || "Chyba při vytváření karty";
-      setCreateError(message);
+      const message =
+        e.response?.data?.error || "Chyba při vytváření karty.";
+      setCreateCardError(message);
     }
   }
 
-  // helper pro hezké datum transakcí
-  function formatDateTime(ts) {
-    if (!ts) return "";
-    const d = new Date(ts);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mi = String(d.getMinutes()).padStart(2, "0");
-    return `${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+  function validateChildForm() {
+    const errs = {};
+    if (!childForm.fullName.trim()) {
+      errs.fullName = "Zadej jméno a příjmení.";
+    }
+    if (!childForm.birthNumber.trim()) {
+      errs.birthNumber = "Zadej rodné číslo.";
+    }
+    if (!childForm.email.trim()) {
+      errs.email = "Zadej email dítěte.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(childForm.email)) {
+      errs.email = "Zadej platný email.";
+    }
+    return errs;
   }
 
-  // odhlášení
-  function handleLogout() {
-    setUser(null);
-    navigate("/", { replace: true });
-  }
+  const handleChildInputChange = (e) => {
+    const { name, value } = e.target;
+    setChildForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-  // změny ve formulářích
-  const onRepl = (e) => setRepl((s) => ({ ...s, [e.target.name]: e.target.value }));
-  const onCc   = (e) => setCc((s)   => ({ ...s, [e.target.name]: e.target.value }));
-  const onMob  = (e) => setMob((s)  => ({ ...s, [e.target.name]: e.target.value }));
+  async function handleChildInviteSubmit(e) {
+    e.preventDefault();
+    if (!user) return;
 
-  // odeslání operací – PŘEPSÁNO NA axios api
-  async function doPost(path, body, okText) {
-    setMsg("");
-    setErr("");
+    const errs = validateChildForm();
+    setChildErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setChildLoading(true);
+    setGlobalError("");
+    setInfoMsg("");
+
     try {
-      const res = await api.post(
-        `/cards/${path}`,
-        body,
+      const headers = buildAuthHeader();
+      await api.post(
+        "/client/children/invite",
         {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: authHeader(),
-          },
-        }
+          fullName: childForm.fullName,
+          birthNumber: childForm.birthNumber,
+          email: childForm.email,
+        },
+        { headers }
       );
 
-      const data = res.data || {};
-      if (data.ok === false) {
-        throw new Error(data.error || "REQUEST_FAILED");
-      }
+      setShowChildModal(false);
+      setChildForm({ fullName: "", birthNumber: "", email: "" });
+      setChildErrors({});
+      setInfoMsg(
+        "Byl vytvořen účet pro dítě. Přístupový kód byl odeslán na zadaný email."
+      );
 
-      setMsg(okText);
-      await reload(); // aktualizuj zůstatky a transakce
+      loadDashboard();
     } catch (e) {
-      const message = e.response?.data?.error || e.message || "REQUEST_FAILED";
-      setErr(message);
+      console.error("Chyba při vytváření dětského účtu:", e);
+      const msg =
+        e.response?.data?.error || "Chyba při vytváření dětského účtu.";
+      setGlobalError(msg);
+    } finally {
+      setChildLoading(false);
     }
   }
 
-  async function submitRepl(e) {
+  // změna loginu/hesla (pro dítě)
+  const handleCredInputChange = (e) => {
+    const { name, value } = e.target;
+    setCredForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  async function handleCredSubmit(e) {
     e.preventDefault();
-    if (!repl.card || !repl.amount) return setErr("Vyplň číslo karty a částku.");
-    await doPost("replenish", { ...repl, amount: Number(repl.amount) }, "Dobití proběhlo.");
+    setCredError("");
+    setInfoMsg("");
+
+    if (!credForm.newLogin || !credForm.newPassword) {
+      setCredError("Vyplň nový login i heslo.");
+      return;
+    }
+    if (credForm.newPassword !== credForm.confirmPassword) {
+      setCredError("Hesla se neshodují.");
+      return;
+    }
+
+    try {
+      setCredLoading(true);
+      const headers = buildAuthHeader();
+      await api.post(
+        "/auth/change-credentials",
+        {
+          newLogin: credForm.newLogin,
+          newPassword: credForm.newPassword,
+        },
+        { headers }
+      );
+
+      // stará data jsou přepsaná, MustChangeCredentials = 0
+      // odhlásíme uživatele a pošleme ho na login
+      setUser(null);
+      navigate("/login");
+    } catch (e) {
+      console.error("Chyba při změně přihlašovacích údajů:", e);
+      const msg =
+        e.response?.data?.error ||
+        "Chyba při změně přihlašovacích údajů.";
+      setCredError(msg);
+    } finally {
+      setCredLoading(false);
+    }
   }
 
-  async function submitCc(e) {
-    e.preventDefault();
-    if (!cc.fromCard || !cc.toCard || !cc.amount) return setErr("Vyplň karty a částku.");
-    await doPost("transfer", { ...cc, amount: Number(cc.amount) }, "Převod proběhl.");
+  if (!user) {
+    return null;
   }
 
-  async function submitMob(e) {
-    e.preventDefault();
-    if (!mob.fromCard || !mob.phone || !mob.amount) return setErr("Vyplň kartu, telefon a částku.");
-    await doPost("mobile", { ...mob, amount: Number(mob.amount) }, "Mobilní převod proběhl.");
-  }
+  const mustChange = client?.mustChangeCredentials;
 
   return (
     <div className="dashboard-page">
-      {/* HEADER BAR */}
-      <div className="dashboard-header">
+      <header className="dashboard-header">
         <div>
-          <h2 className="dashboard-heading">Můj účet</h2>
-          <div className="dashboard-subtitle">
-            {client ? client.fullName : ""}
-          </div>
+          <h1 className="dashboard-title">Můj dashboard</h1>
+          {client && (
+            <p className="dashboard-subtitle">
+              Vítej, <strong>{client.fullName}</strong>
+            </p>
+          )}
         </div>
+      </header>
 
-        <button onClick={handleLogout} className="logout-btn">
-          Odhlásit se
-        </button>
-      </div>
+      {globalError && <div className="alert alert-error">{globalError}</div>}
+      {infoMsg && <div className="alert alert-success">{infoMsg}</div>}
+      {createCardError && (
+        <div className="alert alert-error">{createCardError}</div>
+      )}
 
-      {/* LAYOUT */}
-      <div className="dashboard-content">
-        {/* LEVÁ ČÁST */}
-        <div className="left-side">
-          {/* INFO O KLIENTOVI */}
-          <section className="client-info-box card">
-            <h3 className="section-title">Informace o klientovi</h3>
+      {loading ? (
+        <div className="dashboard-loading">Načítání dat...</div>
+      ) : (
+        <div className="dashboard-grid">
+          {/* Pokud musí změnit login/heslo – červené upozornění + formulář */}
+          {mustChange && (
+            <section className="card warning-card">
+              <h2 className="section-title">
+                ⚠ Musíš změnit přihlašovací údaje
+              </h2>
+              <p className="warning-text">
+                Přihlásil/a ses pomocí dočasného kódu. Pro další používání
+                účtu si nastav vlastní login a heslo.
+              </p>
 
-            {!client ? (
-              <p>Načítám údaje…</p>
-            ) : (
-              <div className="client-grid">
-                <div><strong>Jméno:</strong> {client.fullName || "—"}</div>
-                <div><strong>Telefon:</strong> {client.phone || "—"}</div>
-                <div><strong>Adresa:</strong> {client.address || "—"}</div>
-                <div><strong>Doklad:</strong> {client.passportNumber || "—"}</div>
-                <div><strong>Typ klienta:</strong> {client.clientType || "—"}</div>
-                <div><strong>Celkem peněz:</strong> {client.totalBalance} UAH</div>
-                <div><strong>Login:</strong> {client.login}</div>
+              <form onSubmit={handleCredSubmit} className="cred-form">
+                <label className="modal-label">Nový login:</label>
+                <input
+                  type="text"
+                  name="newLogin"
+                  value={credForm.newLogin}
+                  onChange={handleCredInputChange}
+                  className="modal-input"
+                />
+
+                <label className="modal-label">Nové heslo:</label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={credForm.newPassword}
+                  onChange={handleCredInputChange}
+                  className="modal-input"
+                />
+
+                <label className="modal-label">Potvrzení hesla:</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={credForm.confirmPassword}
+                  onChange={handleCredInputChange}
+                  className="modal-input"
+                />
+
+                {credError && (
+                  <div className="modal-error">{credError}</div>
+                )}
+
+                <div className="modal-actions">
+                  <button
+                    type="submit"
+                    className="btn-confirm"
+                    disabled={credLoading}
+                  >
+                    {credLoading
+                      ? "Ukládám..."
+                      : "Uložit a odhlásit"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* Údaje o klientovi */}
+          <section className="card client-card">
+            <h2 className="section-title">Údaje o klientovi</h2>
+            {client ? (
+              <div className="client-info">
+                <div>
+                  <strong>Jméno:</strong> {client.fullName}
+                </div>
+                <div>
+                  <strong>Datum narození:</strong>{" "}
+                  {client.birthDate
+                    ? new Date(client.birthDate).toLocaleDateString("cs-CZ")
+                    : "—"}
+                </div>
+                <div>
+                  <strong>Adresa:</strong> {client.address || "—"}
+                </div>
+                <div>
+                  <strong>Doklad:</strong>{" "}
+                  {client.passportNumber || "—"}
+                </div>
+                <div>
+                  <strong>Typ klienta:</strong>{" "}
+                  {client.clientType || "—"}
+                </div>
+                <div>
+                  <strong>Celkem peněz:</strong>{" "}
+                  {client.totalBalance} Kč
+                </div>
+                <div>
+                  <strong>Login:</strong> {client.login}
+                </div>
               </div>
+            ) : (
+              <p>Data o klientovi se nepodařilo načíst.</p>
             )}
           </section>
 
-          {/* KARTY */}
+          {/* Moje karty */}
           <section className="cards-box card">
             <div className="cards-header">
-              <h3 className="section-title no-margin">Moje karty</h3>
-
+              <h2 className="section-title no-margin">Moje karty</h2>
               <button
+                type="button"
                 onClick={() => {
-                  setCreateError("");
-                  setNewCardType("DEBIT");
+                  setCreateCardError("");
+                  setNewCardType("debetní");
                   setNewCardBrand("VISA");
                   setShowCreateCard(true);
                 }}
@@ -262,25 +402,39 @@ export default function Dashboard() {
             </div>
 
             {cards.length === 0 ? (
-              <div className="cards-empty">Zatím nemáš žádnou kartu.</div>
+              <div className="cards-empty">
+                Zatím nemáš žádnou kartu.
+              </div>
             ) : (
               <div className="cards-list">
                 {cards.map((card) => (
-                  <div key={card.id} className="bank-card">
-                    <div className="bank-card-number">{card.cardNumber}</div>
-
-                    <div className="bank-card-row">
-                      <div><strong>CVV:</strong> {card.cvv}</div>
-                      <div><strong>Platnost:</strong> {card.endDate}</div>
+                  <div key={card.id} className="card-item">
+                    <div className="card-number">
+                      {formatCardNumber(card.cardNumber)}
                     </div>
-
-                    <div className="bank-card-balance">
-                      <strong>Balanc:</strong> {card.balance} UAH
+                    <div className="card-row">
+                      <span>Typ:</span> <strong>{card.cardType}</strong>
                     </div>
-
-                    <div className="bank-card-type">
-                      {card.cardType}
-                      {card.brand ? ` • ${card.brand}` : null}
+                    <div className="card-row">
+                      <span>Značka:</span>{" "}
+                      <strong>{card.brand}</strong>
+                    </div>
+                    <div className="card-row">
+                      <span>CVV:</span> <strong>{card.cvv}</strong>
+                    </div>
+                    <div className="card-row">
+                      <span>Platnost do:</span>{" "}
+                      <strong>
+                        {card.endDate
+                          ? new Date(card.endDate).toLocaleDateString(
+                              "cs-CZ"
+                            )
+                          : "—"}
+                      </strong>
+                    </div>
+                    <div className="card-row">
+                      <span>Zůstatek:</span>{" "}
+                      <strong>{card.balance} Kč</strong>
                     </div>
                   </div>
                 ))}
@@ -288,80 +442,102 @@ export default function Dashboard() {
             )}
           </section>
 
-          {/* Operace s kartami */}
-          <section className="card card-actions-box">
-            <h3 className="section-title">Operace s kartami</h3>
-
-            <div className="card-actions-grid">
-              {/* Karta → karta */}
-              <form onSubmit={submitCc} className="card-action-form">
-                <h4>Převod karta → karta</h4>
-                <input
-                  name="fromCard"
-                  placeholder="Z karty"
-                  value={cc.fromCard}
-                  onChange={onCc}
-                />
-                <input
-                  name="toCard"
-                  placeholder="Na kartu"
-                  value={cc.toCard}
-                  onChange={onCc}
-                />
-                <input
-                  name="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Částka"
-                  value={cc.amount}
-                  onChange={onCc}
-                />
-                <input
-                  name="description"
-                  placeholder="Poznámka"
-                  value={cc.description}
-                  onChange={onCc}
-                />
-                <button className="btn-confirm">Převést</button>
-              </form>
+          {/* Dětské účty rodiče */}
+          <section className="card children-card">
+            <div className="children-header">
+              <h2 className="section-title">Dětské účty</h2>
+              <button
+                type="button"
+                className="create-child-btn"
+                onClick={() => {
+                  setChildErrors({});
+                  setChildForm({
+                    fullName: "",
+                    birthNumber: "",
+                    email: "",
+                  });
+                  setShowChildModal(true);
+                }}
+              >
+                Vytvořit účet pro neplnoletého
+              </button>
             </div>
 
-            {(msg || err) && (
-              <div className={`note ${err ? "note-error" : "note-ok"}`}>
-                {msg && <div>{msg}</div>}
-                {err && <div>{err}</div>}
+            {childrenAccounts.length === 0 ? (
+              <p>Nemáš zatím žádné dětské účty.</p>
+            ) : (
+              <div className="children-list">
+                {childrenAccounts.map((ch) => (
+                  <div
+                    key={ch.BankAccountID || ch.ClientID}
+                    className="child-item"
+                  >
+                    <div>
+                      <strong>{ch.FullName || ch.fullName}</strong>
+                    </div>
+                    <div>
+                      <span>ID účtu:</span>{" "}
+                      <strong>
+                        {ch.BankAccountID || ch.bankAccountId}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Datum narození:</span>{" "}
+                      <strong>
+                        {ch.BirthDate
+                          ? new Date(ch.BirthDate).toLocaleDateString(
+                              "cs-CZ"
+                            )
+                          : "—"}
+                      </strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Poslední transakce */}
+          <section className="card transactions-card">
+            <h2 className="section-title">Poslední transakce</h2>
+            {transactions.length === 0 ? (
+              <p>Žádné transakce k zobrazení.</p>
+            ) : (
+              <div className="transactions-list">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="transaction-item">
+                    <div>
+                      <strong>Od:</strong> {tx.sender}
+                    </div>
+                    <div>
+                      <strong>Komu:</strong> {tx.receiver}
+                    </div>
+                    <div>
+                      <strong>Částka:</strong> {tx.amount} Kč
+                    </div>
+                    <div>
+                      <strong>Poznámka:</strong>{" "}
+                      {tx.note || "—"}
+                    </div>
+                    <div>
+                      <strong>Datum:</strong>{" "}
+                      {formatDateTime(tx.transactionDate)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>
         </div>
+      )}
 
-        {/* PRAVÁ ČÁST */}
-        <div className="right-side">
-          <section className="transactions-box card">
-            <h3 className="section-title center">Poslední transakce</h3>
-
-            <div className="transactions-scroll">
-              {transactions.length === 0 ? (
-                <div className="transactions-empty">Žádné transakce.</div>
-              ) : (
-                transactions.map((tx) => (
-                  <div key={tx.id} className="transaction-card">
-                    <div><strong>Od:</strong> {tx.sender}</div>
-                    <div><strong>Komu:</strong> {tx.receiver}</div>
-                    <div><strong>Suma:</strong> {tx.amount} ₴</div>
-                    <div><strong>Poznámka:</strong> {tx.note || "—"}</div>
-                    <div><strong>Datum:</strong> {formatDateTime(tx.transactionDate)}</div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
-      </div>
-
-      {/* MODAL */}
+      {/* MODAL – VYTVOŘENÍ KARTY */}
       {showCreateCard && (
-        <div className="create-card-modal-backdrop" role="dialog" aria-modal="true">
+        <div
+          className="create-card-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="create-card-modal">
             <h3 className="modal-title">Vytvořit kartu</h3>
 
@@ -381,22 +557,106 @@ export default function Dashboard() {
               onChange={(e) => setNewCardBrand(e.target.value)}
               className="modal-select"
             >
-              <option value="VISA">Visa</option>
-              <option value="MASTERCARD">Mastercard</option>
+              <option value="VISA">VISA</option>
+              <option value="MASTERCARD">MASTERCARD</option>
             </select>
 
-            {createError && (
-              <div className="modal-error">{createError}</div>
+            {createCardError && (
+              <div className="modal-error">{createCardError}</div>
             )}
 
             <div className="modal-actions">
-              <button onClick={() => setShowCreateCard(false)} className="btn-cancel">
+              <button
+                onClick={() => setShowCreateCard(false)}
+                className="btn-cancel"
+              >
                 Zrušit
               </button>
-              <button onClick={handleConfirmCreateCard} className="btn-confirm">
+              <button
+                onClick={handleConfirmCreateCard}
+                className="btn-confirm"
+              >
                 Potvrdit
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL – VYTVOŘENÍ ÚČTU PRO NEPLNOLETÉHO */}
+      {showChildModal && (
+        <div
+          className="create-card-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="create-card-modal">
+            <h3 className="modal-title">
+              Vytvořit účet pro neplnoletého
+            </h3>
+
+            <form onSubmit={handleChildInviteSubmit}>
+              <label className="modal-label">Jméno a příjmení:</label>
+              <input
+                type="text"
+                name="fullName"
+                value={childForm.fullName}
+                onChange={handleChildInputChange}
+                className="modal-input"
+              />
+              {childErrors.fullName && (
+                <div className="modal-error">
+                  {childErrors.fullName}
+                </div>
+              )}
+
+              <label className="modal-label">Rodné číslo:</label>
+              <input
+                type="text"
+                name="birthNumber"
+                value={childForm.birthNumber}
+                onChange={handleChildInputChange}
+                className="modal-input"
+                placeholder="RRMMDD/XXXX"
+              />
+              {childErrors.birthNumber && (
+                <div className="modal-error">
+                  {childErrors.birthNumber}
+                </div>
+              )}
+
+              <label className="modal-label">Email dítěte:</label>
+              <input
+                type="email"
+                name="email"
+                value={childForm.email}
+                onChange={handleChildInputChange}
+                className="modal-input"
+              />
+              {childErrors.email && (
+                <div className="modal-error">
+                  {childErrors.email}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowChildModal(false)}
+                  className="btn-cancel"
+                  disabled={childLoading}
+                >
+                  Zrušit
+                </button>
+                <button
+                  type="submit"
+                  className="btn-confirm"
+                  disabled={childLoading}
+                >
+                  {childLoading ? "Odesílám..." : "Vytvořit účet"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

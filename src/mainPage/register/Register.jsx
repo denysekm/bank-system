@@ -22,21 +22,40 @@ function Register() {
 
   // validace na frontendu
   const validate = () => {
-    const newErrors = {};
+  const newErrors = {};
 
-    if (!formData.fullName) newErrors.fullName = "Pole je povinné";
-    if (!formData.birthDate) newErrors.birthDate = "Pole je povinné";
-    if (!formData.passportNumber) newErrors.passportNumber = "Pole je povinné";
-    if (!formData.clientType) newErrors.clientType = "Pole je povinné";
-    if (!formData.login) newErrors.login = "Pole je povinné";
-    if (!formData.password) newErrors.password = "Pole je povinné";
-
-    if (formData.phone && !/^\+420\d{9}$/.test(formData.phone)) {
-      newErrors.phone = "Zadej telefon ve formátu +420XXXXXXXXX";
+  if (!formData.fullName) newErrors.fullName = "Pole je povinné";
+  if (!formData.birthDate) {
+    newErrors.birthDate = "Pole je povinné";
+  } else {
+    // 🔴 kontrola 18+
+    const birth = new Date(formData.birthDate);
+    if (Number.isNaN(birth.getTime())) {
+      newErrors.birthDate = "Neplatné datum.";
+    } else {
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        newErrors.birthDate = "Pro registraci musíš být starší 18 let.";
+      }
     }
+  }
 
-    return newErrors;
-  };
+  if (!formData.passportNumber) newErrors.passportNumber = "Pole je povinné";
+  if (!formData.clientType) newErrors.clientType = "Pole je povinné";
+  if (!formData.login) newErrors.login = "Pole je povinné";
+  if (!formData.password) newErrors.password = "Pole je povinné";
+
+  if (formData.phone && !/^\+420\d{9}$/.test(formData.phone)) {
+    newErrors.phone = "Zadej telefon ve formátu +420XXXXXXXXX";
+  }
+
+  return newErrors;
+};
 
   // onChange handler
   const handleChange = (e) => {
@@ -124,6 +143,7 @@ function Register() {
               name="birthDate"
               value={formData.birthDate}
               onChange={handleChange}
+              max={new Date().toISOString().split("T")[0]}
               className={errors.birthDate ? "invalid" : ""}
             />
             {errors.birthDate && (

@@ -1,13 +1,26 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { pool } from "../db.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = Router();
 
-/**
-  POST /api/auth/register
-  Vytvoří nového klienta + bankovní účet
- */
+function calculateAge(birthDateStr) {
+  const birth = new Date(birthDateStr);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
+// POST /api/auth/register – registrace dospělého
 router.post("/register", async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -22,7 +35,6 @@ router.post("/register", async (req, res) => {
       clientType,
     } = req.body || {};
 
-    // 1) základní validace
     if (
       !login ||
       !password ||
@@ -34,20 +46,25 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Chybí povinná pole." });
     }
 
-    // 2) OCHRANA: dovol jen hodnoty, které chceme mít v DB v češtině
-    //    Tohle přebije jakékoli PERSONAL/BUSINESS, které by sem případně přišlo.
+    const age = calculateAge(birthDate);
+    if (age == null) {
+      return res.status(400).json({ error: "Neplatné datum narození." });
+    }
+    if (age < 18) {
+      return res
+        .status(400)
+        .json({ error: "Pro registraci musíš být starší 18 let." });
+    }
+
     let normalizedType;
     if (clientType === "Fyzická osoba") {
       normalizedType = "Fyzická osoba";
     } else if (clientType === "Právnická osoba") {
       normalizedType = "Právnická osoba";
     } else {
-      // pokud přijde cokoliv jiného (třeba "PERSONAL"), taky ho přemapujeme
-      // ať se nám do DB nestrká anglické slovo
       normalizedType = "Fyzická osoba";
     }
 
-    // 3) unikátní login?
     const [exists] = await pool.query(
       "SELECT ID FROM bank_account WHERE login = ? LIMIT 1",
       [login]
@@ -62,25 +79,16 @@ router.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
-    // 4) vytvoříme klienta (pozor: ukládáme normalizedType)
     const [clientRes] = await conn.query(
-      `INSERT INTO client (FullName, BirthDate, PassportNumber, address, phone, ClientType)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        fullName,
-        birthDate, // YYYY-MM-DD
-        passportNumber,
-        address || null,
-        phone || null,
-        normalizedType,   // <<< TADY JE TEN ROZDÍL
-      ]
+      `INSERT INTO client (FullName, BirthDate, PassportNumber, address, phone, ClientType, IsMinor)
+       VALUES (?, ?, ?, ?, ?, ?, 0)`,
+      [fullName, birthDate, passportNumber, address || null, phone || null, normalizedType]
     );
     const clientId = clientRes.insertId;
 
-    // 5) vytvoříme bankovní účet
     await conn.query(
-      `INSERT INTO bank_account (ClientID, login, password, role)
-       VALUES (?, ?, ?, 'ROLE_USER')`,
+      `INSERT INTO bank_account (ClientID, login, password, role, ParentAccountID, MustChangeCredentials)
+       VALUES (?, ?, ?, 'ROLE_USER', NULL, 0)`,
       [clientId, login, hash]
     );
 
@@ -98,10 +106,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/login
- * Zkontroluje přihlašovací údaje a vrátí info o uživateli.
- */
+// POST /api/auth/login – běžné přihlášení (login + heslo)
 router.post("/login", async (req, res) => {
   try {
     const { login, password } = req.body || {};
@@ -119,8 +124,8 @@ router.post("/login", async (req, res) => {
     }
 
     const user = rows[0];
-
     const ok = await bcrypt.compare(password, user.password);
+
     if (!ok) {
       return res.status(401).json({ error: "Neplatné přihlašovací údaje" });
     }
@@ -136,6 +141,42 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Auth login error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/auth/change-credentials
+// Přihlášený uživatel změní login + heslo (dítě po prvním přihlášení)
+router.post("/change-credentials", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id; // bank_account.ID
+    const { newLogin, newPassword } = req.body || {};
+
+    if (!newLogin || !newPassword) {
+      return res.status(400).json({ error: "Chybí nový login nebo heslo." });
+    }
+
+    // kontrola, že login ještě neexistuje u někoho jiného
+    const [exists] = await pool.query(
+      "SELECT ID FROM bank_account WHERE login = ? AND ID <> ? LIMIT 1",
+      [newLogin, userId]
+    );
+    if (exists.length > 0) {
+      return res.status(400).json({ error: "Login už existuje." });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+
+    await pool.query(
+      `UPDATE bank_account
+       SET login = ?, password = ?, MustChangeCredentials = 0
+       WHERE ID = ?`,
+      [newLogin, hash, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Auth change-credentials error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
