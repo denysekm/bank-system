@@ -5,7 +5,7 @@
     Roboto, "Helvetica Neue", Arial, sans-serif;
   color: #1a1a1a;
 
-  /* ✅ Gradient pozadí */
+  /* Gradient pozadí */
   background: linear-gradient(135deg, #e6d4f6, #fbd5d5);
   min-height: 100vh;
 
@@ -22,10 +22,10 @@
   align-items: center;
 }
 
-.dashboard-heading {
+.dashboard-title {
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.8rem; /* Zvětšeno pro lepší viditelnost */
+  font-weight: 700;
   color: #111;
 }
 
@@ -35,27 +35,41 @@
   margin-top: 0.25rem;
 }
 
-.logout-btn {
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.15s ease;
+/* GLOBAL ALERTS */
+.alert {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
-.logout-btn:hover {
-  background: #f4f4f4;
+.alert-error {
+  background-color: #fcebeb;
+  color: #c0392b;
+  border: 1px solid #e74c3c;
+}
+.alert-success {
+  background-color: #e8f9ed;
+  color: #27ae60;
+  border: 1px solid #2ecc71;
 }
 
-/* GRID LAYOUT */
-.dashboard-content {
+.dashboard-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+/* GRID LAYOUT - Nová třída dashboard-grid */
+.dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 2rem;
 }
+
+/* Přizpůsobení staré responsivní logiky pro novou třídu */
 @media (max-width: 900px) {
-  .dashboard-content {
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -64,14 +78,14 @@
 .card {
   background: #fff;
   border-radius: 12px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1.5rem;
+  margin-bottom: 0; /* Protože je v gridu, margin je nahrazen gap */
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
 }
 
 /* SECTIONS */
 .section-title {
-  font-size: 1rem;
+  font-size: 1.1rem; /* Mírně zvětšeno */
   font-weight: 600;
   margin-top: 0;
   margin-bottom: 1rem;
@@ -80,49 +94,53 @@
 .section-title.no-margin {
   margin-bottom: 0;
 }
-.section-title.center {
-  text-align: center;
+.section-head {
+  margin-bottom: 1rem;
+}
+.section-hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
 }
 
-/* KLIENT GRID */
-.client-grid {
+/* VAROVNÁ KARTA (MustChangeCredentials) */
+.warning-card {
+  grid-column: 1 / -1; /* Přes celou šířku */
+  background-color: #fef7f7;
+  border: 1px solid #e74c3c;
+}
+.warning-text {
+  color: #c0392b;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+/* KLIENT INFO GRID (nahrazuje .client-grid) */
+.client-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  row-gap: 0.5rem;
+  row-gap: 0.75rem; /* Zvětšeno z 0.5rem */
   column-gap: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.4;
 }
 @media (max-width: 480px) {
-  .client-grid {
+  .client-info {
     grid-template-columns: 1fr;
   }
 }
 
 /* KARTY */
-.cards-header {
+.cards-header,
+.children-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem; /* Zvětšeno z 1rem */
   align-items: center;
 }
 
-.create-card-btn {
-  background-color: #ff5f5f;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: all 0.15s ease;
-}
-.create-card-btn:hover {
-  background-color: #ff4a4a;
-}
-
-.cards-empty {
+.empty {
   padding: 1rem;
   border: 1px dashed #bbb;
   border-radius: 8px;
@@ -138,79 +156,198 @@
   gap: 1rem;
 }
 
-.bank-card {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+.card-item {
+  background: linear-gradient(135deg, #475a9e, #794da8); /* Nový gradient */
   color: white;
   border-radius: 10px;
-  padding: 1rem;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+  padding: 1rem 1.2rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
-
-.bank-card-number {
-  font-size: 1rem;
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.card-number {
+  font-size: 1.1rem;
   letter-spacing: 2px;
   font-family: monospace;
-  margin-bottom: 0.5rem;
   color: #fff;
   word-spacing: 4px;
 }
-
-.bank-card-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  opacity: 0.95;
+.pill {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.card-meta span {
+  font-weight: 300;
+}
+@media (max-width: 600px) {
+  .card-meta {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-.bank-card-balance {
+/* DŮTSKÉ ÚČTY */
+.children-list {
+  display: grid;
+  gap: 1rem;
+}
+.child-item {
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.child-top {
   font-size: 1rem;
-  font-weight: bold;
-  margin-top: 0.75rem;
-  color: #fff;
+  margin-bottom: 0.5rem;
+}
+.child-row {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.child-row span {
+  color: #666;
 }
 
-.bank-card-type {
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-  opacity: 0.8;
+/* PŘEVOD (nově přidaná sekce) */
+.transfer-card {
+  /* standardní karta - necháme prázdné, aby dědilo .card */
 }
 
 /* TRANSAKCE */
-.transactions-box {
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.transactions-scroll {
-  overflow-y: auto;
+.transactions-list {
   display: grid;
-  gap: 1rem;
-  font-size: 0.9rem;
-  padding-right: 0.5rem;
-}
-
-.transactions-empty {
-  text-align: center;
-  color: #777;
-  font-style: italic;
+  gap: 0.75rem;
   font-size: 0.9rem;
 }
-
-.transaction-card {
+.transaction-item {
   background: #f9f9f9;
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   line-height: 1.4;
   border: 1px solid #eee;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.transaction-item span {
+  color: #777;
+  font-weight: 400;
+}
+.transaction-item strong {
+  font-weight: 600;
+  color: #333;
+}
+@media (max-width: 600px) {
+  .transaction-item {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* MODAL */
-.create-card-modal-backdrop {
+/* FORMULÁŘOVÉ PRVKY (generický styl pro formuláře) */
+.form {
+  display: grid;
+  gap: 1rem;
+}
+.field-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: -0.5rem; /* Aby byl blíž k inputu */
+  color: #222;
+}
+.field-input,
+.field-select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.field-input:focus,
+.field-select:focus {
+  border-color: #6c47ff;
+  box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.15);
+}
+.inline-error {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  margin-top: -0.75rem;
+}
+
+/* TLAČÍTKA A AKCE (generický styl) */
+.form-actions,
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #6c47ff;
+  color: white;
+  border-color: #6c47ff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #5a3fe0;
+  border-color: #5a3fe0;
+}
+
+.btn-secondary {
+  background-color: #ff5f5f;
+  color: white;
+  border-color: #ff5f5f;
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: #ff4a4a;
+  border-color: #ff4a4a;
+}
+
+.btn-ghost {
+  background: white;
+  border: 1px solid #ccc;
+  color: #333;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: #f4f4f4;
+  border-color: #bbb;
+}
+
+/* MODAL (přesně jako v původním stylu) */
+.modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -218,82 +355,19 @@
   z-index: 1000;
 }
 
-.create-card-modal {
+.modal {
   background: #fff;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 2rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 450px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
 .modal-title {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  font-weight: 600;
+  margin: 0 0 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: #111;
-  text-align: left;
-}
-
-.modal-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: #222;
-}
-
-.modal-select {
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  outline: none;
-}
-.modal-select:focus {
-  border-color: #6c47ff;
-  box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.15);
-}
-
-.modal-error {
-  color: #e74c3c;
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.btn-cancel {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.15s ease;
-}
-.btn-cancel:hover {
-  background: #f4f4f4;
-}
-
-.btn-confirm {
-  background: #6c47ff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.15s ease;
-}
-.btn-confirm:hover {
-  background: #5a3fe0;
+  text-align: center;
 }
