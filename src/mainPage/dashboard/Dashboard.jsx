@@ -190,6 +190,7 @@ export default function Dashboard() {
       loadDashboard();
     } catch (e) {
       console.error("Chyba při vytváření dětského účtu:", e);
+      // Zde se zobrazí chyba z backendu, pokud je uživatel nezletilý (403)
       setGlobalError(e.response?.data?.error || "Chyba při vytváření dětského účtu.");
     } finally {
       setChildLoading(false);
@@ -259,6 +260,7 @@ export default function Dashboard() {
   if (!user) return null;
 
   const mustChange = client?.mustChangeCredentials;
+  const isMinor = client?.isMinor; // Získáme informaci o nezletilosti z načtených dat
 
   return (
     <div className="dashboard-page">
@@ -440,43 +442,46 @@ export default function Dashboard() {
             </form>
           </section>
 
-          <section className="card children-card">
-            <div className="children-header">
-              <h2 className="section-title">Dětské účty</h2>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setChildErrors({});
-                  setChildForm({ fullName: "", birthNumber: "", email: "" });
-                  setShowChildModal(true);
-                }}
-              >
-                Vytvořit účet pro neplnoletého
-              </button>
-            </div>
-
-            {childrenAccounts.length === 0 ? (
-              <div className="empty">Nemáš zatím žádné dětské účty.</div>
-            ) : (
-              <div className="children-list">
-                {childrenAccounts.map((ch) => (
-                  <div key={ch.BankAccountID || ch.ClientID} className="child-item">
-                    <div className="child-top">
-                      <strong>{ch.FullName || ch.fullName}</strong>
-                    </div>
-                    <div className="child-row">
-                      <span>ID účtu:</span> <strong>{ch.BankAccountID || ch.bankAccountId}</strong>
-                    </div>
-                    <div className="child-row">
-                      <span>Datum narození:</span>{" "}
-                      <strong>{ch.BirthDate ? new Date(ch.BirthDate).toLocaleDateString("cs-CZ") : "—"}</strong>
-                    </div>
-                  </div>
-                ))}
+          {/* NOVÁ PODMÍNKA: Sekce Dětské účty se zobrazí POUZE pro dospělé (!isMinor) */}
+          {!isMinor && (
+            <section className="card children-card">
+              <div className="children-header">
+                <h2 className="section-title">Dětské účty</h2>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setChildErrors({});
+                    setChildForm({ fullName: "", birthNumber: "", email: "" });
+                    setShowChildModal(true);
+                  }}
+                >
+                  Vytvořit účet pro neplnoletého
+                </button>
               </div>
-            )}
-          </section>
+
+              {childrenAccounts.length === 0 ? (
+                <div className="empty">Nemáš zatím žádné dětské účty.</div>
+              ) : (
+                <div className="children-list">
+                  {childrenAccounts.map((ch) => (
+                    <div key={ch.BankAccountID || ch.ClientID} className="child-item">
+                      <div className="child-top">
+                        <strong>{ch.FullName || ch.fullName}</strong>
+                      </div>
+                      <div className="child-row">
+                        <span>ID účtu:</span> <strong>{ch.BankAccountID || ch.bankAccountId}</strong>
+                      </div>
+                      <div className="child-row">
+                        <span>Datum narození:</span>{" "}
+                        <strong>{ch.BirthDate ? new Date(ch.BirthDate).toLocaleDateString("cs-CZ") : "—"}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <section className="card transactions-card">
             <h2 className="section-title">Poslední transakce</h2>
@@ -527,7 +532,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MODAL – VYTVOŘENÍ ÚČTU PRO NEPLNOLETÉHO */}
+      {/* MODAL – VYTVOŘENÍ ÚČTU PRO NEPLNOLETÉHO (Modal zůstává, aby fungoval pro dospělé) */}
       {showChildModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
@@ -578,5 +583,6 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+    
   );
 }

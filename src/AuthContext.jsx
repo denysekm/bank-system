@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState } from "react";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // user = { login, password, id, clientId, role }
+  // user = { login, password, id, clientId, role, isMinor } <- POZOR, isMinor přichází z Dashboardu, ale je potřeba
   const [user, setUser] = useState(null);
 
   return (
