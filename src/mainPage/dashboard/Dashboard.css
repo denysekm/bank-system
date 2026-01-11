@@ -223,11 +223,6 @@
   color: #666;
 }
 
-/* PŘEVOD (nově přidaná sekce) */
-.transfer-card {
-  /* standardní karta - necháme prázdné, aby dědilo .card */
-}
-
 /* TRANSAKCE */
 .transactions-list {
   display: grid;
@@ -370,4 +365,23 @@
   font-weight: 700;
   color: #111;
   text-align: center;
+}
+
+.dashboard-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-toggle {
+  border: none;
+  background: rgba(0,0,0,0.06);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0,0,0,0.10);
 }

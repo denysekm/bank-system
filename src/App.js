@@ -8,6 +8,8 @@ import Main from "./mainPage/main/Main.jsx";
 import Register from "./mainPage/register/Register.jsx";
 import Dashboard from "./mainPage/dashboard/Dashboard.jsx";
 import Login from "./mainPage/login/Login.jsx";
+import AdminDashboard from "./mainPage/admin/AdminDashboard.jsx";
+
 
 import "./App.css";
 
@@ -38,6 +40,9 @@ function App() {
 
           {/* Fallback – cokoliv jiného pošleme na domů */}
           <Route path="*" element={<Navigate to="/" />} />
+          {/* Dashboard (pro admina) */}
+          <Route path="/admin" element={<AdminDashboard />} />
+
         </Routes>
       </Router>
     </AuthProvider>

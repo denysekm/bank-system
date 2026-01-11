@@ -1,0 +1,171 @@
+/* PAGE LAYOUT (stejný vibe jako Dashboard.css) */
+.admin-page {
+  padding: 2rem;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #1a1a1a;
+
+  /* ✅ Gradient pozadí jako dashboard */
+  background: linear-gradient(135deg, #e6d4f6, #fbd5d5);
+  min-height: 100vh;
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.admin-heading {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.admin-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+/* Použij pro odhlášení stejné jako dashboard */
+.admin-logout-btn {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 10px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3a1c2a;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.admin-logout-btn:hover {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #7f1d1d;
+}
+
+.admin-logout-btn:active {
+  transform: scale(0.97);
+}
+
+
+/* CARD WRAPPER (stejné jako .card v dashboardu) */
+.admin-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* SECTION TITLE */
+.admin-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #111;
+}
+
+/* ERROR / INFO */
+.admin-error {
+  background: #fff;
+  border: 1px solid #ff9c9c;
+  color: #b42318;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
+}
+
+.admin-loading {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* TABLE WRAPPER */
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+/* TABLE */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.admin-table th {
+  background: #f6f6f6;
+  font-weight: 600;
+  color: #111;
+}
+
+.admin-table tr:hover td {
+  background: #fafafa;
+}
+
+.admin-empty {
+  padding: 1rem;
+  border: 1px dashed #bbb;
+  border-radius: 8px;
+  color: #666;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9rem;
+  background: #fafafa;
+}
+
+/* DELETE BUTTON (stejný stylový směr jako .create-card-btn) */
+.admin-delete-btn {
+  background-color: #ff5f5f;
+  color: white;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.admin-delete-btn:hover {
+  background-color: #ff4a4a;
+}
+
+.admin-delete-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* RESPONSIVE drobnosti */
+@media (max-width: 480px) {
+  .admin-page {
+    padding: 1rem;
+  }
+
+  .admin-card {
+    padding: 1rem;
+  }
+}

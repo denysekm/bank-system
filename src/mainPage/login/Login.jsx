@@ -4,7 +4,6 @@ import { useAuth } from "../../AuthContext";
 import "./Login.css";
 import { api } from "../../lib/api";
 
-
 export default function Login() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
@@ -35,7 +34,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // ⬇️ místo fetch používáme axios "api"
       const res = await api.post("/auth/login", {
         login,
         password,
@@ -46,21 +44,22 @@ export default function Login() {
       // uložíme přihlášeného uživatele do kontextu
       setUser({
         login,
-        password, // necháváme plaintext pro Basic Auth při volání backendu
+        password, // plaintext pro Basic Auth při volání backendu
         id: data.user.id,
         clientId: data.user.clientId,
         role: data.user.role,
       });
 
-      // přejdeme na dashboard
-      navigate("/dashboard");
-    }    catch (err) {
+      // ✅ přesměrování podle role
+      if (data.user.role === "ROLE_ADMIN") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
       console.error("Login error:", err);
 
       if (err.response) {
-        console.log("Login response status:", err.response.status);
-        console.log("Login response data:", err.response.data);
-
         const serverMsg =
           (typeof err.response.data === "string"
             ? err.response.data
@@ -77,7 +76,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-
   }
 
   return (

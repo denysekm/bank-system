@@ -1,0 +1,123 @@
+.sb-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  z-index: 999;
+}
+
+.sb-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sb-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px;
+  background: linear-gradient(135deg, #9770d2, #d17171);
+  color: white;
+  transform: translateX(-102%);
+  transition: transform 220ms ease;
+  z-index: 1000;
+  padding: 14px;
+  box-shadow: 8px 0 24px rgba(0,0,0,0.25);
+}
+
+.sb-panel.open {
+  transform: translateX(0);
+}
+
+.sb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px 14px;
+}
+
+.sb-title {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.sb-close {
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.sb-close:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sb-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+.sb-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.sb-item.active {
+  background: rgba(255,255,255,0.14);
+}
+
+.sb-item.disabled {
+  color: rgba(255,255,255,0.45);
+  cursor: not-allowed;
+}
+
+.sb-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* horní navigace */
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* spodní část */
+.sb-bottom {
+  margin-top:600px;/*⬅️ TOTO ho pošle úplně dolů */
+  padding-top: 35px;
+}
+
+/* logout tlačítko */
+.sb-logout {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,0.15);
+  color: #2a0f1b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sb-logout:hover {
+  background: rgba(0,0,0,0.25);
+}
