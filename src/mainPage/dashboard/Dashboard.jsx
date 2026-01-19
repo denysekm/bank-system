@@ -3,6 +3,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
+import "../../messages/error.css";
+import "../../messages/success.css";
 import { api } from "../../lib/api";
 import Sidebar from "../../components/sidebar/sidebar";
 
@@ -20,13 +22,10 @@ export default function Dashboard() {
   const [childrenAccounts, setChildrenAccounts] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [globalError, setGlobalError] = useState("");
-  const [infoMsg, setInfoMsg] = useState("");
 
   const [showCreateCard, setShowCreateCard] = useState(false);
   const [newCardType, setNewCardType] = useState("debetní");
   const [newCardBrand, setNewCardBrand] = useState("VISA");
-  const [createCardError, setCreateCardError] = useState("");
 
   const [showChildModal, setShowChildModal] = useState(false);
   const [childForm, setChildForm] = useState({ fullName: "", birthNumber: "", email: "" });
@@ -40,6 +39,9 @@ export default function Dashboard() {
 
   // ✅ Převod účet → účet (přesunutý do sidebaru)
   const [accTx, setAccTx] = useState({ fromAccount: "", toAccount: "", amount: "", note: "" });
+
+  // ✅ Full-screen overlay message
+  const [overlayMsg, setOverlayMsg] = useState(null); // { type: 'success' | 'error', text: '', hint: '' }
 
   const buildAuthHeader = useCallback(() => {
     if (!user) return {};
@@ -64,7 +66,7 @@ export default function Dashboard() {
   const loadDashboard = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    setGlobalError("");
+    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
 
@@ -86,7 +88,7 @@ export default function Dashboard() {
         navigate("/login");
         return;
       }
-      setGlobalError(e.response?.data?.error || "Chyba při načítání dat.");
+      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při načítání dat." });
     } finally {
       setLoading(false);
     }
@@ -113,25 +115,40 @@ export default function Dashboard() {
     return String(cardNumber).replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
   }
 
+  // ✅ spočti věk z birthDate (spolehlivé, nezávislé na backend isMinor)
+  function getAge(birthDate) {
+    if (!birthDate) return null;
+    const b = new Date(birthDate);
+    if (Number.isNaN(b.getTime())) return null;
+
+    const now = new Date();
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age;
+  }
+
+  const age = getAge(client?.birthDate);
+  const canCreateChildAccount = age !== null && age >= 18;
+
   // univerzální POST s přihlášením (použijeme i pro převod účet→účet)
   async function doPost(path, body, okText) {
-    setInfoMsg("");
-    setGlobalError("");
+    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
       await api.post(path, body, { headers });
-      setInfoMsg(okText);
+      setOverlayMsg({ type: "success", text: okText });
       await loadDashboard();
     } catch (e) {
       const message = e.response?.data?.error || e.message || "Chyba požadavku.";
-      setGlobalError(message);
+      setOverlayMsg({ type: "error", text: message });
     }
   }
 
   // ---------- Karta: vytvoření ----------
   async function handleConfirmCreateCard() {
     if (!user) return;
-    setCreateCardError("");
+    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
       const res = await api.post("/cards", { cardType: newCardType, brand: newCardBrand }, { headers });
@@ -151,10 +168,10 @@ export default function Dashboard() {
       ]);
 
       setShowCreateCard(false);
-      setInfoMsg("Karta byla vytvořena.");
+      setOverlayMsg({ type: "success", text: "Karta byla vytvořena.", hint: "Nyní ji uvidíš v seznamu svých karet." });
     } catch (e) {
       console.error("Chyba při vytváření karty:", e);
-      setCreateCardError(e.response?.data?.error || "Chyba při vytváření karty.");
+      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při vytváření karty." });
     }
   }
 
@@ -177,13 +194,18 @@ export default function Dashboard() {
     e.preventDefault();
     if (!user) return;
 
+    // ✅ guard: jen plnoletý
+    if (!canCreateChildAccount) {
+      setOverlayMsg({ type: "error", text: "Tuto akci může provést pouze plnoletý uživatel." });
+      return;
+    }
+
     const errs = validateChildForm();
     setChildErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
     setChildLoading(true);
-    setGlobalError("");
-    setInfoMsg("");
+    setOverlayMsg(null);
 
     try {
       const headers = buildAuthHeader();
@@ -196,11 +218,15 @@ export default function Dashboard() {
       setShowChildModal(false);
       setChildForm({ fullName: "", birthNumber: "", email: "" });
       setChildErrors({});
-      setInfoMsg("Byl vytvořen účet pro dítě. Přístupový kód byl odeslán na zadaný email.");
+      setOverlayMsg({
+        type: "success",
+        text: "Byl vytvořen účet pro dítě.",
+        hint: "Přístupový kód byl odeslán na zadaný email."
+      });
       loadDashboard();
     } catch (e) {
       console.error("Chyba při vytváření dětského účtu:", e);
-      setGlobalError(e.response?.data?.error || "Chyba při vytváření dětského účtu.");
+      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při vytváření dětského účtu." });
     } finally {
       setChildLoading(false);
     }
@@ -214,8 +240,7 @@ export default function Dashboard() {
 
   async function handleCredSubmit(e) {
     e.preventDefault();
-    setCredError("");
-    setInfoMsg("");
+    setOverlayMsg(null);
 
     if (!credForm.newLogin || !credForm.newPassword) {
       setCredError("Vyplň nový login i heslo.");
@@ -253,7 +278,7 @@ export default function Dashboard() {
   async function submitAccTx(e) {
     e.preventDefault();
     if (!accTx.fromAccount || !accTx.toAccount || !accTx.amount) {
-      return setGlobalError("Vyplň účet odesílatele, účet příjemce a částku.");
+      return setOverlayMsg({ type: "error", text: "Vyplň účet odesílatele, účet příjemce a částku." });
     }
 
     const ACCOUNT_TRANSFER_ENDPOINT = "/accounts/transfer";
@@ -268,7 +293,6 @@ export default function Dashboard() {
   if (!user) return null;
 
   const mustChange = client?.mustChangeCredentials;
-  const isMinor = client?.isMinor;
 
   return (
     <div className="dashboard-page">
@@ -302,9 +326,7 @@ export default function Dashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {globalError && <div className="alert alert-error">{globalError}</div>}
-      {infoMsg && <div className="alert alert-success">{infoMsg}</div>}
-      {createCardError && <div className="alert alert-error">{createCardError}</div>}
+
 
       {loading ? (
         <div className="dashboard-loading">Načítání dat...</div>
@@ -386,7 +408,6 @@ export default function Dashboard() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      setCreateCardError("");
                       setNewCardType("debetní");
                       setNewCardBrand("VISA");
                       setShowCreateCard(true);
@@ -420,7 +441,8 @@ export default function Dashboard() {
                 )}
               </section>
 
-              {!isMinor && (
+              {/* ✅ DĚTSKÉ ÚČTY: jen pro plnoleté */}
+              {canCreateChildAccount && (
                 <section className="card children-card">
                   <div className="children-header">
                     <h2 className="section-title">Dětské účty</h2>
@@ -555,6 +577,7 @@ export default function Dashboard() {
       )}
 
       {/* MODAL – VYTVOŘENÍ KARTY */}
+      {/* MODAL – VYTVOŘENÍ KARTY */}
       {showCreateCard && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
@@ -572,8 +595,6 @@ export default function Dashboard() {
               <option value="MASTERCARD">MASTERCARD</option>
             </select>
 
-            {createCardError && <div className="inline-error">{createCardError}</div>}
-
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setShowCreateCard(false)}>Zrušit</button>
               <button className="btn btn-primary" onClick={handleConfirmCreateCard}>Potvrdit</button>
@@ -583,7 +604,7 @@ export default function Dashboard() {
       )}
 
       {/* MODAL – VYTVOŘENÍ ÚČTU PRO NEPLNOLETÉHO */}
-      {showChildModal && (
+      {canCreateChildAccount && showChildModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <h3 className="modal-title">Vytvořit účet pro neplnoletého</h3>
@@ -621,7 +642,12 @@ export default function Dashboard() {
               {childErrors.email && <div className="inline-error">{childErrors.email}</div>}
 
               <div className="modal-actions">
-                <button className="btn btn-ghost" type="button" onClick={() => setShowChildModal(false)} disabled={childLoading}>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setShowChildModal(false)}
+                  disabled={childLoading}
+                >
                   Zrušit
                 </button>
                 <button className="btn btn-primary" type="submit" disabled={childLoading}>
@@ -630,6 +656,28 @@ export default function Dashboard() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ZPRÁVA NA CELOU OBRAZOVKU */}
+      {overlayMsg && (
+        <div
+          className={`message-overlay ${overlayMsg.type}`}
+          onClick={() => setOverlayMsg(null)}
+        >
+          {overlayMsg.type === "success" ? (
+            <div className="success-box" onClick={(e) => e.stopPropagation()}>
+              <div className="checkmark">✔</div>
+              <div className="message">{overlayMsg.text}</div>
+              {overlayMsg.hint && <div className="hint">{overlayMsg.hint}</div>}
+            </div>
+          ) : (
+            <div className="error-box" onClick={(e) => e.stopPropagation()}>
+              <div className="crossmark">✖</div>
+              <div className="message">{overlayMsg.text}</div>
+              {overlayMsg.hint && <div className="hint">{overlayMsg.hint}</div>}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
+import "../../messages/error.css";
+import "../../messages/success.css";
 import { api } from "../../lib/api";
 
 
@@ -18,44 +20,45 @@ function Register() {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [overlayMsg, setOverlayMsg] = useState(null); // { type: 'success' | 'error', text: '' }
   const navigate = useNavigate();
 
   // validace na frontendu
   const validate = () => {
-  const newErrors = {};
+    const newErrors = {};
 
-  if (!formData.fullName) newErrors.fullName = "Pole je povinné";
-  if (!formData.birthDate) {
-    newErrors.birthDate = "Pole je povinné";
-  } else {
-    // 🔴 kontrola 18+
-    const birth = new Date(formData.birthDate);
-    if (Number.isNaN(birth.getTime())) {
-      newErrors.birthDate = "Neplatné datum.";
+    if (!formData.fullName) newErrors.fullName = "Pole je povinné";
+    if (!formData.birthDate) {
+      newErrors.birthDate = "Pole je povinné";
     } else {
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
-      if (age < 18) {
-        newErrors.birthDate = "Pro registraci musíš být starší 18 let.";
+      // 🔴 kontrola 18+
+      const birth = new Date(formData.birthDate);
+      if (Number.isNaN(birth.getTime())) {
+        newErrors.birthDate = "Neplatné datum.";
+      } else {
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        if (age < 18) {
+          newErrors.birthDate = "Pro registraci musíš být starší 18 let.";
+        }
       }
     }
-  }
 
-  if (!formData.passportNumber) newErrors.passportNumber = "Pole je povinné";
-  if (!formData.clientType) newErrors.clientType = "Pole je povinné";
-  if (!formData.login) newErrors.login = "Pole je povinné";
-  if (!formData.password) newErrors.password = "Pole je povinné";
+    if (!formData.passportNumber) newErrors.passportNumber = "Pole je povinné";
+    if (!formData.clientType) newErrors.clientType = "Pole je povinné";
+    if (!formData.login) newErrors.login = "Pole je povinné";
+    if (!formData.password) newErrors.password = "Pole je povinné";
 
-  if (formData.phone && !/^\+420\d{9}$/.test(formData.phone)) {
-    newErrors.phone = "Zadej telefon ve formátu +420XXXXXXXXX";
-  }
+    if (formData.phone && !/^\+420\d{9}$/.test(formData.phone)) {
+      newErrors.phone = "Zadej telefon ve formátu +420XXXXXXXXX";
+    }
 
-  return newErrors;
-};
+    return newErrors;
+  };
 
   // onChange handler
   const handleChange = (e) => {
@@ -91,18 +94,15 @@ function Register() {
       const data = res.data;
 
       if (data?.ok) {
-        alert("Registrace proběhla úspěšně.");
-        navigate("/login");
+        setOverlayMsg({ type: "success", text: "Registrace proběhla úspěšně." });
+        // We'll navigate after they close the overlay or after a delay
       } else {
-        alert("Něco se pokazilo při registraci.");
+        setOverlayMsg({ type: "error", text: "Něco se pokazilo při registraci." });
       }
     } catch (err) {
       console.error("Chyba při registraci:", err);
-      if (err.response) {
-        alert(err.response.data?.error || "Registrace selhala.");
-      } else {
-        alert("Chyba spojení se serverem.");
-      }
+      const message = err.response?.data?.error || "Registrace selhala.";
+      setOverlayMsg({ type: "error", text: message });
     } finally {
       setLoading(false);
     }
@@ -241,6 +241,29 @@ function Register() {
           </div>
         </form>
       </div>
+      {/* ZPRÁVA NA CELOU OBRAZOVKU */}
+      {overlayMsg && (
+        <div
+          className={`message-overlay ${overlayMsg.type}`}
+          onClick={() => {
+            setOverlayMsg(null);
+            if (overlayMsg.type === "success") navigate("/login");
+          }}
+        >
+          {overlayMsg.type === "success" ? (
+            <div className="success-box" onClick={(e) => e.stopPropagation()}>
+              <div className="checkmark">✔</div>
+              <div className="message">{overlayMsg.text}</div>
+              <div className="hint">Klikni pro pokračování na přihlášení</div>
+            </div>
+          ) : (
+            <div className="error-box" onClick={(e) => e.stopPropagation()}>
+              <div className="crossmark">✖</div>
+              <div className="message">{overlayMsg.text}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

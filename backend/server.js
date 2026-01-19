@@ -53,6 +53,10 @@ app.use("/api/cards", cards);
 app.use("/api/transactions", transactions);
 app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
 
+/* 4.5) statické stránky (messages) */
+app.use("/messages", express.static(path.join(__dirname, "public/messages")));
+
+
 /* 5) start server */
 const port = Number(process.env.PORT || 5000);
 
