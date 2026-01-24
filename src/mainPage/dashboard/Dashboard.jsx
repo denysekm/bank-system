@@ -34,6 +34,9 @@ export default function Dashboard() {
   const [childErrors, setChildErrors] = useState({});
   const [childLoading, setChildLoading] = useState(false);
 
+  // ✅ Swiper: index aktuálně zobrazené karty
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+
   // změna loginu/hesla (pro dítě po prvním přihlášení)
   const [credForm, setCredForm] = useState({ newLogin: "", newPassword: "", confirmPassword: "" });
   const [credError, setCredError] = useState("");
@@ -381,18 +384,39 @@ export default function Dashboard() {
               <section className="card client-card">
                 <h2 className="section-title">Údaje o klientovi</h2>
                 {client ? (
-                  <div className="client-info">
-                    <div><strong>Jméno:</strong> {client.fullName}</div>
-                    <div>
-                      <strong>Datum narození:</strong>{" "}
-                      {client.birthDate ? new Date(client.birthDate).toLocaleDateString("cs-CZ") : "—"}
+                  <div className="client-data-grid">
+                    <div className="data-item">
+                      <span className="data-label">Jméno</span>
+                      <span className="data-value">{client.fullName}</span>
                     </div>
-                    <div><strong>Adresa:</strong> {client.address || "—"}</div>
-                    <div><strong>Doklad:</strong> {client.passportNumber || "—"}</div>
-                    <div><strong>Typ klienta:</strong> {client.clientType || "—"}</div>
-                    <div><strong>Číslo účtu:</strong> {client.accountNumber || "—"}</div>
-                    <div><strong>Celkem peněz:</strong> {client.totalBalance} Kč</div>
-                    <div><strong>Login:</strong> {client.login}</div>
+                    <div className="data-item">
+                      <span className="data-label">Číslo účtu</span>
+                      <span className="data-value primary">{client.accountNumber || "—"}</span>
+                    </div>
+                    <div className="data-item">
+                      <span className="data-label">Datum narození</span>
+                      <span className="data-value">
+                        {client.birthDate ? new Date(client.birthDate).toLocaleDateString("cs-CZ") : "—"}
+                      </span>
+                    </div>
+                    <div className="data-item">
+                      <span className="data-label">Adresa</span>
+                      <span className="data-value">{client.address || "—"}</span>
+                    </div>
+                    <div className="data-item">
+                      <span className="data-label">Doklad</span>
+                      <span className="data-value">{client.passportNumber || "—"}</span>
+                    </div>
+                    <div className="data-item">
+                      <span className="data-label">Typ klienta</span>
+                      <span className="data-value pill-value">{client.clientType || "—"}</span>
+                    </div>
+                    <div className="data-item full-width">
+                      <div className="balance-summary">
+                        <span className="data-label">Celkový zůstatek</span>
+                        <span className="balance-value">{client.totalBalance} Kč</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p>Data o klientovi se nepodařilo načíst.</p>
@@ -418,23 +442,70 @@ export default function Dashboard() {
                 {cards.length === 0 ? (
                   <div className="empty">Zatím nemáš žádnou kartu.</div>
                 ) : (
-                  <div className="cards-list">
-                    {cards.map((card) => (
-                      <div key={card.id} className="card-item">
-                        <div className="card-top">
-                          <div className="card-number">{formatCardNumber(card.cardNumber)}</div>
-                          <div className="pill">{card.cardType} · {card.brand}</div>
-                        </div>
-                        <div className="card-meta">
-                          <div><span>CVV:</span> <strong>{card.cvv}</strong></div>
-                          <div>
-                            <span>Platnost do:</span>{" "}
-                            <strong>{card.endDate ? new Date(card.endDate).toLocaleDateString("cs-CZ") : "—"}</strong>
+                  <div className="cards-swiper">
+                    <button
+                      type="button"
+                      className="swiper-arrow prev"
+                      disabled={currentCardIndex === 0}
+                      onClick={() => setCurrentCardIndex((p) => p - 1)}
+                    >
+                      ‹
+                    </button>
+
+                    <div className="card-physical-wrapper">
+                      {cards.map((card, idx) => (
+                        <div
+                          key={card.id}
+                          className={`card-physical ${card.cardType.toLowerCase().includes("debetní") ? "debit" : "credit"} ${idx === currentCardIndex ? "active" : ""}`}
+                          style={{ display: idx === currentCardIndex ? "flex" : "none" }}
+                        >
+                          <div className="card-inner">
+                            <div className="card-top-row">
+                              <div className="card-chip">
+                                <div className="chip-line"></div>
+                                <div className="chip-line"></div>
+                                <div className="chip-line"></div>
+                              </div>
+                              <div className="card-brand">{card.brand}</div>
+                            </div>
+
+                            <div className="card-middle-row">
+                              <div className="card-number-display">
+                                {formatCardNumber(card.cardNumber)}
+                              </div>
+                            </div>
+
+                            <div className="card-bottom-row">
+                              <div className="card-holder-info">
+                                <span className="label">CARD HOLDER</span>
+                                <span className="value">{client?.fullName?.toUpperCase()}</span>
+                              </div>
+                              <div className="card-expiry-info">
+                                <span className="label">EXPIRES</span>
+                                <span className="value">
+                                  {card.endDate ? new Date(card.endDate).toLocaleDateString("cs-CZ", { month: "2-digit", year: "2-digit" }) : "—"}
+                                </span>
+                              </div>
+                              <div className="card-cvv-info">
+                                <span className="label">CVV</span>
+                                <span className="value">***</span>
+                              </div>
+                            </div>
+
+                            <div className="card-type-label">{card.cardType}</div>
                           </div>
-                          <div><span>Zůstatek:</span> <strong>{card.balance} Kč</strong></div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="swiper-arrow next"
+                      disabled={currentCardIndex === cards.length - 1}
+                      onClick={() => setCurrentCardIndex((p) => p + 1)}
+                    >
+                      ›
+                    </button>
                   </div>
                 )}
               </section>
