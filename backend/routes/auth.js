@@ -79,6 +79,15 @@ router.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
+    // Generate unique AccountNumber
+    let accountNumber;
+    let accExists = true;
+    while (accExists) {
+      accountNumber = "2000" + Math.floor(100000 + Math.random() * 900000);
+      const [check] = await conn.query("SELECT 1 FROM bank_account WHERE AccountNumber = ? LIMIT 1", [accountNumber]);
+      accExists = check.length > 0;
+    }
+
     const [clientRes] = await conn.query(
       `INSERT INTO client (FullName, BirthDate, PassportNumber, address, phone, ClientType, IsMinor)
        VALUES (?, ?, ?, ?, ?, ?, 0)`,
@@ -86,16 +95,19 @@ router.post("/register", async (req, res) => {
     );
     const clientId = clientRes.insertId;
 
+    // Bonus for new account (set to 0, bonus is given for debit card creation instead)
+    const initialBalance = 0.00;
+
     await conn.query(
-      `INSERT INTO bank_account (ClientID, login, password, role, ParentAccountID, MustChangeCredentials)
-       VALUES (?, ?, ?, 'ROLE_USER', NULL, 0)`,
-      [clientId, login, hash]
+      `INSERT INTO bank_account (ClientID, login, password, role, ParentAccountID, MustChangeCredentials, AccountNumber, Balance)
+       VALUES (?, ?, ?, 'ROLE_USER', NULL, 0, ?, ?)`,
+      [clientId, login, hash, accountNumber, initialBalance]
     );
 
     await conn.commit();
-    return res.status(201).json({ ok: true, clientId });
+    return res.status(201).json({ ok: true, clientId, accountNumber });
   } catch (err) {
-    await (conn?.rollback?.().catch(() => {}));
+    await (conn?.rollback?.().catch(() => { }));
     console.error("Register error:", err);
     return res.status(500).json({
       error:

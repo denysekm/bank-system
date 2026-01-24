@@ -96,6 +96,13 @@ export default function Dashboard() {
     loadDashboard();
   }, [loadDashboard]);
 
+  // ✅ Pre-fill fromAccount when client data is loaded
+  useEffect(() => {
+    if (client?.accountNumber) {
+      setAccTx((prev) => ({ ...prev, fromAccount: client.accountNumber }));
+    }
+  }, [client]);
+
   // ---------- helpers ----------
   function formatDateTime(ts) {
     if (!ts) return "";
@@ -271,11 +278,11 @@ export default function Dashboard() {
       return addToast("error", "Vyplň účet odesílatele, účet příjemce a částku.");
     }
 
-    const ACCOUNT_TRANSFER_ENDPOINT = "/accounts/transfer";
+    const ACCOUNT_TRANSFER_ENDPOINT = "/transactions/transfer";
 
     await doPost(
       ACCOUNT_TRANSFER_ENDPOINT,
-      { ...accTx, amount: Number(accTx.amount) },
+      { toAccountNumber: accTx.toAccount, amount: Number(accTx.amount), note: accTx.note },
       "Převod mezi účty proběhl."
     );
   }
@@ -383,6 +390,7 @@ export default function Dashboard() {
                     <div><strong>Adresa:</strong> {client.address || "—"}</div>
                     <div><strong>Doklad:</strong> {client.passportNumber || "—"}</div>
                     <div><strong>Typ klienta:</strong> {client.clientType || "—"}</div>
+                    <div><strong>Číslo účtu:</strong> {client.accountNumber || "—"}</div>
                     <div><strong>Celkem peněz:</strong> {client.totalBalance} Kč</div>
                     <div><strong>Login:</strong> {client.login}</div>
                   </div>
@@ -505,21 +513,21 @@ export default function Dashboard() {
               <form className="transfer-form" onSubmit={submitAccTx}>
                 <div className="transfer-grid">
                   <div className="transfer-group">
-                    <label className="transfer-label">Z účtu</label>
+                    <label className="transfer-label">Z mého účtu</label>
                     <div className="transfer-input-wrapper">
                       <span className="transfer-input-icon">📤</span>
                       <input
                         className="transfer-input"
                         name="fromAccount"
                         value={accTx.fromAccount}
-                        onChange={onAccTxChange}
-                        placeholder="ID nebo číslo účtu"
+                        readOnly
+                        placeholder="Načítám..."
                       />
                     </div>
                   </div>
 
                   <div className="transfer-group">
-                    <label className="transfer-label">Na účet</label>
+                    <label className="transfer-label">Na cílový účet</label>
                     <div className="transfer-input-wrapper">
                       <span className="transfer-input-icon">📥</span>
                       <input
@@ -527,7 +535,7 @@ export default function Dashboard() {
                         name="toAccount"
                         value={accTx.toAccount}
                         onChange={onAccTxChange}
-                        placeholder="ID nebo číslo účtu"
+                        placeholder="Číslo účtu příjemce"
                       />
                     </div>
                   </div>

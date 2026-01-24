@@ -27,18 +27,17 @@ export async function ensureAdminExists() {
     await conn.beginTransaction();
 
     const [clientRes] = await conn.query(
-        "INSERT INTO client (FullName, BirthDate, PassportNumber, ClientType) VALUES (?, ?, ?, ?)",
-        ["Admin", "1990-01-01", "ADMIN-SEED", "ADULT"]
+      "INSERT INTO client (FullName, BirthDate, PassportNumber, ClientType) VALUES (?, ?, ?, ?)",
+      ["Admin", "1990-01-01", "ADMIN-SEED", "ADULT"]
     );
 
-
     const clientId = clientRes.insertId;
-
     const hash = await bcrypt.hash(ADMIN_PASS, 10);
+    const adminAccountNumber = "2000000001"; // Fixed for admin or generate random
 
     await conn.query(
-      "INSERT INTO bank_account (ClientID, login, password, role) VALUES (?, ?, ?, ?)",
-      [clientId, ADMIN_LOGIN, hash, "ROLE_ADMIN"]
+      "INSERT INTO bank_account (ClientID, login, password, role, AccountNumber) VALUES (?, ?, ?, ?, ?)",
+      [clientId, ADMIN_LOGIN, hash, "ROLE_ADMIN", adminAccountNumber]
     );
 
     await conn.commit();

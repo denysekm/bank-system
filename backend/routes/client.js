@@ -24,24 +24,21 @@ router.get("/me", requireAuth, async (req, res) => {
 
     const c = clientRows[0];
 
-    const [sumRows] = await pool.query(
-      `SELECT COALESCE(SUM(Balance), 0) AS totalBalance
-       FROM bank_card
-       WHERE BankAccountID = ?`,
-      [req.user.id]
-    );
-    const totalBalance = sumRows[0].totalBalance || 0;
-
     const [accRows] = await pool.query(
-      `SELECT MustChangeCredentials
+      `SELECT AccountNumber, Balance, MustChangeCredentials
        FROM bank_account
        WHERE ID = ?
        LIMIT 1`,
       [req.user.id]
     );
 
-    const mustChange =
-      accRows.length > 0 ? !!accRows[0].MustChangeCredentials : false;
+    if (accRows.length === 0) {
+      return res.status(404).json({ error: "Účet nenalezen" });
+    }
+
+    const acc = accRows[0];
+    const totalBalance = acc.Balance || 0;
+    const mustChange = !!acc.MustChangeCredentials;
 
     res.json({
       fullName: c.FullName,
@@ -50,6 +47,7 @@ router.get("/me", requireAuth, async (req, res) => {
       address: c.address,
       phone: c.phone,
       clientType: c.ClientType,
+      accountNumber: acc.AccountNumber,
       totalBalance: Number(totalBalance).toFixed(2),
       login: req.user.login,
       mustChangeCredentials: mustChange,
@@ -116,6 +114,15 @@ router.post("/children/invite", requireAuth, async (req, res) => {
         .json({ error: "Dítě musí být mladší 18 let." });
     }
 
+    // Generate unique AccountNumber for child
+    let accountNumber;
+    let accExists = true;
+    while (accExists) {
+      accountNumber = "2000" + Math.floor(100000 + Math.random() * 900000);
+      const [check] = await conn.query("SELECT 1 FROM bank_account WHERE AccountNumber = ? LIMIT 1", [accountNumber]);
+      accExists = check.length > 0;
+    }
+
     // 6-místný kód jako první heslo
     const code = String(
       Math.floor(100000 + Math.random() * 900000)
@@ -123,7 +130,6 @@ router.post("/children/invite", requireAuth, async (req, res) => {
 
     await conn.beginTransaction();
 
-    // 🔴 TADY OPRAVA: PassportNumber = birthNumber (NE NULL)
     const [clientRes] = await conn.query(
       `INSERT INTO client (FullName, BirthDate, PassportNumber, address, phone, ClientType, IsMinor)
        VALUES (?, ?, ?, NULL, NULL, 'Fyzická osoba', 1)`,
@@ -134,9 +140,9 @@ router.post("/children/invite", requireAuth, async (req, res) => {
     const hash = await bcrypt.hash(code, 10);
 
     await conn.query(
-      `INSERT INTO bank_account (ClientID, login, password, role, ParentAccountID, MustChangeCredentials)
-       VALUES (?, ?, ?, 'ROLE_USER', ?, 1)`,
-      [childClientId, email, hash, parentAccountId]
+      `INSERT INTO bank_account (ClientID, login, password, role, ParentAccountID, MustChangeCredentials, AccountNumber, Balance)
+       VALUES (?, ?, ?, 'ROLE_USER', ?, 1, ?, 0)`,
+      [childClientId, email, hash, parentAccountId, accountNumber]
     );
 
     await conn.commit();
@@ -152,7 +158,7 @@ router.post("/children/invite", requireAuth, async (req, res) => {
 
     return res.json({ ok: true });
   } catch (err) {
-    await (conn?.rollback?.().catch(() => {}));
+    await (conn?.rollback?.().catch(() => { }));
     console.error("POST /client/children/invite error:", err);
     res.status(500).json({ error: "Server error" });
   } finally {

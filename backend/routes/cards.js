@@ -28,10 +28,13 @@ async function generateUniqueCardNumber() {
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const accountId = req.user.id; // bank_account.ID
+
+    // Načteme karty a balance z účtu
     const [rows] = await pool.query(
-      `SELECT ID, CardNumber, CVV, EndDate, CardType, Balance
-       FROM bank_card
-       WHERE BankAccountID = ?`,
+      `SELECT bc.ID, bc.CardNumber, bc.CVV, bc.EndDate, bc.CardType, bc.Brand, ba.Balance
+       FROM bank_card bc
+       JOIN bank_account ba ON bc.BankAccountID = ba.ID
+       WHERE bc.BankAccountID = ?`,
       [accountId]
     );
 
@@ -106,24 +109,46 @@ router.post("/", requireAuth, async (req, res) => {
     endDateObj.setFullYear(endDateObj.getFullYear() + 5);
     const endDateSql = endDateObj.toISOString().slice(0, 10); // YYYY-MM-DD
 
-    // 6) Uložení nové karty do databáze (včetně bonusu)
-    const [result] = await pool.query(
-      `INSERT INTO bank_card
-        (BankAccountID, CardNumber, CVV, EndDate, CardType, Brand, Balance)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [accountId, cardNumber, cvv, endDateSql, finalType, finalBrand, initialBalance]
-    );
+    // 6) Začneme transakci pro vložení karty a případný bonus
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // 7) Odpověď pro frontend
-    res.status(201).json({
-      id: result.insertId,
-      cardNumber,
-      cvv,
-      endDate: endDateSql,
-      balance: initialBalance.toFixed(2), // "1000.00" nebo "0.00"
-      cardType: finalType,
-      brand: finalBrand,
-    });
+      const [result] = await conn.query(
+        `INSERT INTO bank_card
+          (BankAccountID, CardNumber, CVV, EndDate, CardType, Brand, Balance)
+         VALUES (?, ?, ?, ?, ?, ?, 0)`,
+        [accountId, cardNumber, cvv, endDateSql, finalType, finalBrand]
+      );
+
+      // Pokud je debetní, přidáme bonus na ÚČET
+      if (finalType === "debetní") {
+        await conn.query(
+          "UPDATE bank_account SET Balance = Balance + ? WHERE ID = ?",
+          [initialBalance, accountId]
+        );
+      }
+
+      await conn.commit();
+
+      // Zjistíme aktuální balance účtu pro odpověď
+      const [acc] = await conn.query("SELECT Balance FROM bank_account WHERE ID = ?", [accountId]);
+
+      res.status(201).json({
+        id: result.insertId,
+        cardNumber,
+        cvv,
+        endDate: endDateSql,
+        balance: Number(acc[0].Balance).toFixed(2),
+        cardType: finalType,
+        brand: finalBrand,
+      });
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
   } catch (err) {
     console.error("POST /api/cards error:", err);
     res.status(500).json({ error: "Server error při vytváření karty" });
@@ -136,10 +161,13 @@ router.post("/", requireAuth, async (req, res) => {
 // --- DOPLNĚNÉ AKCE: DOBITÍ / PŘEVOD / MOBIL ---
 //
 
-// pomoc: načti kartu s FOR UPDATE (kvůli transakcím) + BankAccountID
+// pomoc: načti kartu s FOR UPDATE (kvůli transakcím) + BankAccountID a AccountBalance
 async function findCardLocked(conn, cardNumber) {
   const [rows] = await conn.query(
-    "SELECT ID, BankAccountID, CardNumber, Balance FROM bank_card WHERE CardNumber = ? FOR UPDATE",
+    `SELECT bc.ID, bc.BankAccountID, bc.CardNumber, ba.Balance, ba.AccountNumber 
+     FROM bank_card bc
+     JOIN bank_account ba ON bc.BankAccountID = ba.ID 
+     WHERE bc.CardNumber = ? FOR UPDATE`,
     [cardNumber]
   );
   return rows[0] || null;
@@ -171,8 +199,8 @@ router.post("/replenish", requireAuth, async (req, res) => {
     }
 
     await conn.query(
-      "UPDATE bank_card SET Balance = Balance + ? WHERE CardNumber = ?",
-      [amount, card]
+      "UPDATE bank_account SET Balance = Balance + ? WHERE ID = ?",
+      [amount, cardRow.BankAccountID]
     );
 
     // ⬇️ doplněno BankAccountID (vlastník dobíjené karty / iniciátor)
@@ -218,12 +246,12 @@ router.post("/transfer", requireAuth, async (req, res) => {
     if (Number(from.Balance) < amount) throw new Error("INSUFFICIENT_FUNDS");
 
     await conn.query(
-      "UPDATE bank_card SET Balance = Balance - ? WHERE CardNumber = ?",
-      [amount, fromCard]
+      "UPDATE bank_account SET Balance = Balance - ? WHERE ID = ?",
+      [amount, from.BankAccountID]
     );
     await conn.query(
-      "UPDATE bank_card SET Balance = Balance + ? WHERE CardNumber = ?",
-      [amount, toCard]
+      "UPDATE bank_account SET Balance = Balance + ? WHERE ID = ?",
+      [amount, to.BankAccountID]
     );
 
     // ⬇️ BankAccountID = vlastník fromCard (iniciátor)
@@ -266,8 +294,8 @@ router.post("/mobile", requireAuth, async (req, res) => {
     if (Number(from.Balance) < amount) throw new Error("INSUFFICIENT_FUNDS");
 
     await conn.query(
-      "UPDATE bank_card SET Balance = Balance - ? WHERE CardNumber = ?",
-      [amount, fromCard]
+      "UPDATE bank_account SET Balance = Balance - ? WHERE ID = ?",
+      [amount, from.BankAccountID]
     );
 
     // ⬇️ BankAccountID = vlastník fromCard; receiver jako PHONE:<číslo>
