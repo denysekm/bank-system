@@ -397,15 +397,144 @@
   gap: 12px;
 }
 
-.sidebar-toggle {
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
-  padding: 10px 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 18px;
-}
-
 .sidebar-toggle:hover {
   background: rgba(0, 0, 0, 0.10);
+}
+
+/* ===== NEW TRANSFER STYLES ===== */
+.transfer-card {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2.5rem !important;
+  border: none;
+  background: #ffffff;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-form {
+  margin-top: 2rem;
+}
+
+.transfer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 650px) {
+  .transfer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.transfer-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transfer-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3a2f61;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transfer-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.transfer-input-icon {
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  pointer-events: none;
+  z-index: 2;
+  line-height: normal;
+  /* Reset line height */
+}
+
+.transfer-input {
+  width: 100%;
+  padding: 14px 14px 14px 45px;
+  border-radius: 14px;
+  border: 2px solid #f0f0f5;
+  background: #f8f9fe;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2d3436;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+/* Odejmutí šipek u inputu typu number */
+.transfer-input[type="number"]::-webkit-outer-spin-button,
+.transfer-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.transfer-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.transfer-input:focus {
+  border-color: #6c47ff;
+  background: #ffffff;
+  box-shadow: 0 5px 15px rgba(108, 71, 255, 0.1);
+}
+
+.transfer-currency {
+  position: absolute;
+  right: 14px;
+  font-weight: 700;
+  color: #a0a0b0;
+  pointer-events: none;
+}
+
+.transfer-actions {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.transfer-submit-btn {
+  background: linear-gradient(135deg, #6c47ff, #4e35cc);
+  color: white;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 20px rgba(108, 71, 255, 0.3);
+}
+
+.transfer-submit-btn:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(108, 71, 255, 0.4);
+}
+
+.transfer-submit-btn span {
+  font-size: 1.4rem;
+  transition: transform 0.3s ease;
+}
+
+.transfer-submit-btn:hover span {
+  transform: translateX(5px);
 }

@@ -13,6 +13,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  // Custom delete confirmation modal state
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, clientId: null, fullName: "" });
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     if (!user) navigate("/login");
     if (user && user.role !== "ROLE_ADMIN") navigate("/dashboard");
@@ -40,18 +44,22 @@ export default function AdminDashboard() {
   }, [load]);
 
   async function handleDelete(clientId, fullName) {
-    const ok = window.confirm(
-      `Opravdu chceš smazat uživatele: ${fullName} (ID ${clientId})?`
-    );
-    if (!ok) return;
+    setConfirmDelete({ show: true, clientId, fullName });
+  }
 
+  async function confirmHandleDelete() {
+    const { clientId } = confirmDelete;
     try {
       setErr("");
+      setDeleting(true);
       const headers = makeAuthHeader(user);
       await api.delete(`/admin/users/${clientId}`, { headers });
+      setConfirmDelete({ show: false, clientId: null, fullName: "" });
       await load();
     } catch (e) {
       setErr(e?.response?.data?.error || "Mazání selhalo");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -125,6 +133,36 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      {confirmDelete.show && (
+        <div className="admin-modal-overlay">
+          <div className="admin-confirm-modal">
+            <div className="admin-confirm-icon">✖</div>
+            <h3 className="admin-confirm-title">Smazat uživatele?</h3>
+            <p className="admin-confirm-text">
+              Opravdu chcete nenávratně smazat uživatele <strong>{confirmDelete.fullName}</strong> (ID {confirmDelete.clientId})?
+              Tato akce je nevratná.
+            </p>
+            <div className="admin-confirm-actions">
+              <button
+                className="admin-btn-cancel"
+                onClick={() => setConfirmDelete({ show: false, clientId: null, fullName: "" })}
+                disabled={deleting}
+              >
+                Zrušit
+              </button>
+              <button
+                className="admin-btn-confirm-delete"
+                onClick={confirmHandleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Mažu..." : "Ano, smazat"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

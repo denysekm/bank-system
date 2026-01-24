@@ -7,9 +7,11 @@ import "../../messages/error.css";
 import "../../messages/success.css";
 import { api } from "../../lib/api";
 import Sidebar from "../../components/sidebar/sidebar";
+import { useToast } from "../../ToastContext";
 
 export default function Dashboard() {
   const { user, setUser } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   // ✅ Off-canvas sidebar
@@ -40,9 +42,6 @@ export default function Dashboard() {
   // ✅ Převod účet → účet (přesunutý do sidebaru)
   const [accTx, setAccTx] = useState({ fromAccount: "", toAccount: "", amount: "", note: "" });
 
-  // ✅ Full-screen overlay message
-  const [overlayMsg, setOverlayMsg] = useState(null); // { type: 'success' | 'error', text: '', hint: '' }
-
   const buildAuthHeader = useCallback(() => {
     if (!user) return {};
     const raw = `${user.login}:${user.password}`;
@@ -66,7 +65,6 @@ export default function Dashboard() {
   const loadDashboard = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
 
@@ -88,7 +86,7 @@ export default function Dashboard() {
         navigate("/login");
         return;
       }
-      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při načítání dat." });
+      addToast("error", e.response?.data?.error || "Chyba při načítání dat.");
     } finally {
       setLoading(false);
     }
@@ -133,22 +131,20 @@ export default function Dashboard() {
 
   // univerzální POST s přihlášením (použijeme i pro převod účet→účet)
   async function doPost(path, body, okText) {
-    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
       await api.post(path, body, { headers });
-      setOverlayMsg({ type: "success", text: okText });
+      addToast("success", okText);
       await loadDashboard();
     } catch (e) {
       const message = e.response?.data?.error || e.message || "Chyba požadavku.";
-      setOverlayMsg({ type: "error", text: message });
+      addToast("error", message);
     }
   }
 
   // ---------- Karta: vytvoření ----------
   async function handleConfirmCreateCard() {
     if (!user) return;
-    setOverlayMsg(null);
     try {
       const headers = buildAuthHeader();
       const res = await api.post("/cards", { cardType: newCardType, brand: newCardBrand }, { headers });
@@ -168,10 +164,10 @@ export default function Dashboard() {
       ]);
 
       setShowCreateCard(false);
-      setOverlayMsg({ type: "success", text: "Karta byla vytvořena.", hint: "Nyní ji uvidíš v seznamu svých karet." });
+      addToast("success", "Karta byla vytvořena.", "Nyní ji uvidíš v seznamu svých karet.");
     } catch (e) {
       console.error("Chyba při vytváření karty:", e);
-      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při vytváření karty." });
+      addToast("error", e.response?.data?.error || "Chyba při vytváření karty.");
     }
   }
 
@@ -196,7 +192,7 @@ export default function Dashboard() {
 
     // ✅ guard: jen plnoletý
     if (!canCreateChildAccount) {
-      setOverlayMsg({ type: "error", text: "Tuto akci může provést pouze plnoletý uživatel." });
+      addToast("error", "Tuto akci může provést pouze plnoletý uživatel.");
       return;
     }
 
@@ -205,7 +201,6 @@ export default function Dashboard() {
     if (Object.keys(errs).length > 0) return;
 
     setChildLoading(true);
-    setOverlayMsg(null);
 
     try {
       const headers = buildAuthHeader();
@@ -218,15 +213,11 @@ export default function Dashboard() {
       setShowChildModal(false);
       setChildForm({ fullName: "", birthNumber: "", email: "" });
       setChildErrors({});
-      setOverlayMsg({
-        type: "success",
-        text: "Byl vytvořen účet pro dítě.",
-        hint: "Přístupový kód byl odeslán na zadaný email."
-      });
+      addToast("success", "Byl vytvořen účet pro dítě.", "Přístupový kód byl odeslán na zadaný email.");
       loadDashboard();
     } catch (e) {
       console.error("Chyba při vytváření dětského účtu:", e);
-      setOverlayMsg({ type: "error", text: e.response?.data?.error || "Chyba při vytváření dětského účtu." });
+      addToast("error", e.response?.data?.error || "Chyba při vytváření dětského účtu.");
     } finally {
       setChildLoading(false);
     }
@@ -240,7 +231,6 @@ export default function Dashboard() {
 
   async function handleCredSubmit(e) {
     e.preventDefault();
-    setOverlayMsg(null);
 
     if (!credForm.newLogin || !credForm.newPassword) {
       setCredError("Vyplň nový login i heslo.");
@@ -278,7 +268,7 @@ export default function Dashboard() {
   async function submitAccTx(e) {
     e.preventDefault();
     if (!accTx.fromAccount || !accTx.toAccount || !accTx.amount) {
-      return setOverlayMsg({ type: "error", text: "Vyplň účet odesílatele, účet příjemce a částku." });
+      return addToast("error", "Vyplň účet odesílatele, účet příjemce a částku.");
     }
 
     const ACCOUNT_TRANSFER_ENDPOINT = "/accounts/transfer";
@@ -509,51 +499,75 @@ export default function Dashboard() {
               <div className="section-head">
                 <h2 className="section-title">Převod mezi účty</h2>
                 <p className="section-hint">
-                  Zadej účet odesílatele, příjemce a částku (podle toho, co tvůj backend očekává – ID nebo číslo účtu).
                 </p>
               </div>
 
-              <form className="form" onSubmit={submitAccTx}>
-                <label className="field-label">Z účtu</label>
-                <input
-                  className="field-input"
-                  name="fromAccount"
-                  value={accTx.fromAccount}
-                  onChange={onAccTxChange}
-                  placeholder="ID nebo číslo účtu"
-                />
+              <form className="transfer-form" onSubmit={submitAccTx}>
+                <div className="transfer-grid">
+                  <div className="transfer-group">
+                    <label className="transfer-label">Z účtu</label>
+                    <div className="transfer-input-wrapper">
+                      <span className="transfer-input-icon">📤</span>
+                      <input
+                        className="transfer-input"
+                        name="fromAccount"
+                        value={accTx.fromAccount}
+                        onChange={onAccTxChange}
+                        placeholder="ID nebo číslo účtu"
+                      />
+                    </div>
+                  </div>
 
-                <label className="field-label">Na účet</label>
-                <input
-                  className="field-input"
-                  name="toAccount"
-                  value={accTx.toAccount}
-                  onChange={onAccTxChange}
-                  placeholder="ID nebo číslo účtu"
-                />
+                  <div className="transfer-group">
+                    <label className="transfer-label">Na účet</label>
+                    <div className="transfer-input-wrapper">
+                      <span className="transfer-input-icon">📥</span>
+                      <input
+                        className="transfer-input"
+                        name="toAccount"
+                        value={accTx.toAccount}
+                        onChange={onAccTxChange}
+                        placeholder="ID nebo číslo účtu"
+                      />
+                    </div>
+                  </div>
 
-                <label className="field-label">Částka</label>
-                <input
-                  className="field-input"
-                  type="number"
-                  step="0.01"
-                  name="amount"
-                  value={accTx.amount}
-                  onChange={onAccTxChange}
-                  placeholder="0.00"
-                />
+                  <div className="transfer-group">
+                    <label className="transfer-label">Částka</label>
+                    <div className="transfer-input-wrapper">
+                      <span className="transfer-input-icon">💰</span>
+                      <input
+                        className="transfer-input"
+                        type="number"
+                        step="0.01"
+                        name="amount"
+                        value={accTx.amount}
+                        onChange={onAccTxChange}
+                        placeholder="0.00"
+                      />
+                      <span className="transfer-currency">Kč</span>
+                    </div>
+                  </div>
 
-                <label className="field-label">Poznámka (volitelné)</label>
-                <input
-                  className="field-input"
-                  name="note"
-                  value={accTx.note}
-                  onChange={onAccTxChange}
-                  placeholder="např. splátka / nákup"
-                />
+                  <div className="transfer-group">
+                    <label className="transfer-label">Poznámka (volitelné)</label>
+                    <div className="transfer-input-wrapper">
+                      <span className="transfer-input-icon">📝</span>
+                      <input
+                        className="transfer-input"
+                        name="note"
+                        value={accTx.note}
+                        onChange={onAccTxChange}
+                        placeholder="např. splátka / nákup"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                <div className="form-actions">
-                  <button className="btn btn-primary" type="submit">Převést</button>
+                <div className="transfer-actions">
+                  <button className="transfer-submit-btn" type="submit">
+                    Provést platbu <span>→</span>
+                  </button>
                 </div>
               </form>
             </section>
@@ -659,27 +673,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ZPRÁVA NA CELOU OBRAZOVKU */}
-      {overlayMsg && (
-        <div
-          className={`message-overlay ${overlayMsg.type}`}
-          onClick={() => setOverlayMsg(null)}
-        >
-          {overlayMsg.type === "success" ? (
-            <div className="success-box" onClick={(e) => e.stopPropagation()}>
-              <div className="checkmark">✔</div>
-              <div className="message">{overlayMsg.text}</div>
-              {overlayMsg.hint && <div className="hint">{overlayMsg.hint}</div>}
-            </div>
-          ) : (
-            <div className="error-box" onClick={(e) => e.stopPropagation()}>
-              <div className="crossmark">✖</div>
-              <div className="message">{overlayMsg.text}</div>
-              {overlayMsg.hint && <div className="hint">{overlayMsg.hint}</div>}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

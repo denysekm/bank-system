@@ -169,3 +169,127 @@
     padding: 1rem;
   }
 }
+
+/* ===== ADMIN MODAL OVERLAY ===== */
+.admin-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  animation: adminFadeIn 0.3s ease;
+}
+
+/* ===== ADMIN CONFIRM MODAL ===== */
+.admin-confirm-modal {
+  background: white;
+  width: 90%;
+  max-width: 450px;
+  border-radius: 20px;
+  padding: 35px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+  animation: adminZoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-confirm-icon {
+  font-size: 50px;
+  color: #ff4757;
+  background: rgba(255, 71, 87, 0.1);
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+
+.admin-confirm-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #2f3542;
+  margin: 0 0 12px 0;
+}
+
+.admin-confirm-text {
+  font-size: 16px;
+  color: #57606f;
+  line-height: 1.6;
+  margin: 0 0 30px 0;
+}
+
+.admin-confirm-actions {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.admin-btn-cancel,
+.admin-btn-confirm-delete {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.admin-btn-cancel {
+  background: #f1f2f6;
+  color: #57606f;
+}
+
+.admin-btn-cancel:hover {
+  background: #dfe4ea;
+}
+
+.admin-btn-confirm-delete {
+  background: #ff4757;
+  color: white;
+}
+
+.admin-btn-confirm-delete:hover {
+  background: #ff6b81;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(255, 71, 87, 0.3);
+}
+
+.admin-btn-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes adminZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

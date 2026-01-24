@@ -1,82 +1,129 @@
-/* ===== OVERLAY ===== */
-.message-overlay.error {
+/* ===== TOAST BACKDROP ===== */
+.toast-backdrop {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #333;
+    backdrop-filter: blur(4px);
     z-index: 9999;
-    cursor: pointer;
+    animation: fadeIn 0.3s ease;
 }
 
-/* ===== ERROR BOX ===== */
-.error-box {
-    background: #fff;
-    border-radius: 20px;
-    padding: 50px 60px;
+/* ===== TOAST CONTAINER ===== */
+.toast-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    width: 90%;
+    max-width: 450px;
+}
+
+/* ===== TOAST ITEM ===== */
+.toast-item {
+    pointer-events: auto;
+    cursor: default;
+    width: 100%;
+    animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== TOAST BOX ===== */
+.error-toast-box {
+    position: relative;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-    animation: fadeInOverlay 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    max-width: 90%;
-    width: 400px;
+    gap: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== CLOSE BUTTON ===== */
+.error-toast-box .toast-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #ff5f5f;
+    /* ČERVENÝ KŘÍŽEK */
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+    padding: 5px;
+    opacity: 0.7;
+}
+
+.error-toast-box .toast-close-btn:hover {
+    color: #ff3b3b;
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 /* ===== ICON ===== */
-.crossmark {
-    font-size: 80px;
+.error-toast-box .toast-icon {
+    font-size: 48px;
     color: #ff5f5f;
-    /* Projektová červená */
-    margin-bottom: 25px;
-    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* ČERVENÁ IKONA */
+    background: rgba(255, 95, 95, 0.1);
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-bottom: 5px;
 }
 
-/* ===== MESSAGE ===== */
-.message {
-    font-size: 22px;
+/* ===== CONTENT ===== */
+.toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast-message {
+    font-size: 20px;
     font-weight: 700;
-    color: #3a2f61;
-    /* Projektová tmavě fialová */
-    letter-spacing: -0.2px;
-    line-height: 1.3;
+    color: #2c3e50;
 }
 
-/* ===== HINT ===== */
-.hint {
-    margin-top: 20px;
+.toast-hint {
     font-size: 15px;
-    color: #666;
-    opacity: 0.8;
+    color: #7f8c8d;
+    line-height: 1.4;
 }
 
 /* ===== ANIMATIONS ===== */
-@keyframes scaleIn {
-    0% {
-        transform: scale(0);
-        opacity: 0;
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeInOverlay {
+@keyframes modalIn {
     from {
         opacity: 0;
-        transform: scale(0.95) translateY(20px);
+        transform: scale(0.8) translateY(20px);
     }
 
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
     }
 }

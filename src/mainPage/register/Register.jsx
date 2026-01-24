@@ -4,6 +4,7 @@ import "./Register.css";
 import "../../messages/error.css";
 import "../../messages/success.css";
 import { api } from "../../lib/api";
+import { useToast } from "../../ToastContext";
 
 
 function Register() {
@@ -20,7 +21,7 @@ function Register() {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [overlayMsg, setOverlayMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   // validace na frontendu
@@ -94,15 +95,15 @@ function Register() {
       const data = res.data;
 
       if (data?.ok) {
-        setOverlayMsg({ type: "success", text: "Registrace proběhla úspěšně." });
-        // We'll navigate after they close the overlay or after a delay
+        addToast("success", "Registrace proběhla úspěšně.", "Nyní se můžeš přihlásit.");
+        setTimeout(() => navigate("/login"), 1500); // Small delay to see the toast
       } else {
-        setOverlayMsg({ type: "error", text: "Něco se pokazilo při registraci." });
+        addToast("error", "Něco se pokazilo při registraci.");
       }
     } catch (err) {
       console.error("Chyba při registraci:", err);
       const message = err.response?.data?.error || "Registrace selhala.";
-      setOverlayMsg({ type: "error", text: message });
+      addToast("error", message);
     } finally {
       setLoading(false);
     }
@@ -241,29 +242,6 @@ function Register() {
           </div>
         </form>
       </div>
-      {/* ZPRÁVA NA CELOU OBRAZOVKU */}
-      {overlayMsg && (
-        <div
-          className={`message-overlay ${overlayMsg.type}`}
-          onClick={() => {
-            setOverlayMsg(null);
-            if (overlayMsg.type === "success") navigate("/login");
-          }}
-        >
-          {overlayMsg.type === "success" ? (
-            <div className="success-box" onClick={(e) => e.stopPropagation()}>
-              <div className="checkmark">✔</div>
-              <div className="message">{overlayMsg.text}</div>
-              <div className="hint">Klikni pro pokračování na přihlášení</div>
-            </div>
-          ) : (
-            <div className="error-box" onClick={(e) => e.stopPropagation()}>
-              <div className="crossmark">✖</div>
-              <div className="message">{overlayMsg.text}</div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
