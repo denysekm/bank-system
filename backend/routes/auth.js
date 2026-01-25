@@ -193,4 +193,77 @@ router.post("/change-credentials", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/auth/change-password
+router.post("/change-password", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword } = req.body || {};
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Chybí staré nebo nové heslo." });
+    }
+
+    // Získat aktuální hash hesla
+    const [rows] = await pool.query("SELECT password FROM bank_account WHERE ID = ? LIMIT 1", [userId]);
+    if (rows.length === 0) return res.status(404).json({ error: "Uživatel nenalezen." });
+
+    const isMatch = await bcrypt.compare(oldPassword, rows[0].password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Staré heslo je nesprávné." });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await pool.query("UPDATE bank_account SET password = ? WHERE ID = ?", [hash, userId]);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Auth change-password error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/auth/change-username
+router.post("/change-username", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { newUsername } = req.body || {};
+
+    if (!newUsername) {
+      return res.status(400).json({ error: "Chybí nové uživatelské jméno." });
+    }
+
+    // Kontrola 30denního limitu
+    const [userRows] = await pool.query("SELECT LastUsernameChange FROM bank_account WHERE ID = ? LIMIT 1", [userId]);
+    if (userRows.length === 0) return res.status(404).json({ error: "Uživatel nenalezen." });
+
+    const lastChange = userRows[0].LastUsernameChange;
+    if (lastChange) {
+      const now = new Date();
+      const last = new Date(lastChange);
+      const diffDays = (now - last) / (1000 * 60 * 60 * 24);
+
+      if (diffDays < 30) {
+        const remaining = Math.ceil(30 - diffDays);
+        return res.status(400).json({ error: `Uživatelské jméno lze změnit až za ${remaining} dní.` });
+      }
+    }
+
+    // Kontrola unikátnosti loginu
+    const [exists] = await pool.query("SELECT ID FROM bank_account WHERE login = ? AND ID <> ? LIMIT 1", [newUsername, userId]);
+    if (exists.length > 0) {
+      return res.status(400).json({ error: "Toto uživatelské jméno už někdo používá." });
+    }
+
+    await pool.query(
+      "UPDATE bank_account SET login = ?, LastUsernameChange = NOW() WHERE ID = ?",
+      [newUsername, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Auth change-username error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

@@ -663,7 +663,177 @@ export default function Dashboard() {
           {activePanel === "settings" && (
             <section className="card">
               <h2 className="section-title">Settings</h2>
-              <p>Zatím není hotovo.</p>
+              <p>Vyberte prosím konkrétní položku nastavení v menu.</p>
+            </section>
+          )}
+
+          {/* NASTAVENÍ: Změna hesla */}
+          {activePanel === "settings-password" && (
+            <section className="card">
+              <h2 className="section-title">Změna hesla</h2>
+              <form className="form" onSubmit={async (e) => {
+                e.preventDefault();
+                const oldPassword = e.target.oldPassword.value;
+                const newPassword = e.target.newPassword.value;
+                const confirmPassword = e.target.confirmPassword.value;
+
+                if (!oldPassword || !newPassword || !confirmPassword) {
+                  return addToast("error", "Vyplňte všechna pole.");
+                }
+                if (newPassword !== confirmPassword) {
+                  return addToast("error", "Nová hesla se neshodují.");
+                }
+                if (newPassword.length < 6) {
+                  return addToast("error", "Nové heslo musí mít alespoň 6 znaků.");
+                }
+
+                try {
+                  setLoading(true);
+                  const headers = buildAuthHeader();
+                  await api.post("/auth/change-password", { oldPassword, newPassword }, { headers });
+                  addToast("success", "Heslo bylo úspěšně změněno.", "Při příštím přihlášení použijte nové heslo.");
+                  e.target.reset();
+                } catch (e) {
+                  addToast("error", e.response?.data?.error || "Chyba při změně hesla.");
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <label className="field-label">Staré heslo</label>
+                <input className="field-input" type="password" name="oldPassword" required />
+
+                <label className="field-label">Nové heslo</label>
+                <input className="field-input" type="password" name="newPassword" required />
+
+                <label className="field-label">Potvrzení nového hesla</label>
+                <input className="field-input" type="password" name="confirmPassword" required />
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? "Ukládám..." : "Změnit heslo"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* NASTAVENÍ: Změna uživatelského jména */}
+          {activePanel === "settings-username" && (
+            <section className="card">
+              <h2 className="section-title">Změna uživatelského jména</h2>
+              <p className="section-hint" style={{ marginBottom: "1rem" }}>
+                Uživatelské jméno lze změnit pouze jednou za 30 dní.
+              </p>
+              <form className="form" onSubmit={async (e) => {
+                e.preventDefault();
+                const newUsername = e.target.newUsername.value.trim();
+
+                if (!newUsername) return addToast("error", "Zadejte nové uživatelské jméno.");
+                if (newUsername === user.login) return addToast("error", "Nové jméno musí být odlišné od stávajícího.");
+
+                try {
+                  setLoading(true);
+                  const headers = buildAuthHeader();
+                  await api.post("/auth/change-username", { newUsername }, { headers });
+
+                  // Aktualizujeme AuthContext s novým loginem, aby seděl Header/Sidebar
+                  setUser({ ...user, login: newUsername });
+                  addToast("success", "Uživatelské jméno bylo změněno.");
+                  e.target.reset();
+                } catch (e) {
+                  addToast("error", e.response?.data?.error || "Chyba při změně jména.");
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <label className="field-label">Nové uživatelské jméno (login)</label>
+                <input className="field-input" type="text" name="newUsername" defaultValue={user.login} required />
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? "Ukládám..." : "Změnit jméno"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* NASTAVENÍ: Změna adresy */}
+          {activePanel === "settings-address" && (
+            <section className="card">
+              <h2 className="section-title">Změna adresy</h2>
+              <form className="form" onSubmit={async (e) => {
+                e.preventDefault();
+                const address = e.target.address.value.trim();
+
+                if (!address) return addToast("error", "Zadejte adresu.");
+
+                try {
+                  setLoading(true);
+                  const headers = buildAuthHeader();
+                  await api.patch("/client/update-info", { address }, { headers });
+
+                  addToast("success", "Adresa byla aktualizována.");
+                  await loadDashboard(); // refresh dat o klientovi v UI
+                } catch (e) {
+                  addToast("error", e.response?.data?.error || "Chyba při aktualizaci adresy.");
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <label className="field-label">Nová adresa</label>
+                <input className="field-input" type="text" name="address" defaultValue={client?.address} required />
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? "Ukládám..." : "Uložit adresu"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* NASTAVENÍ: Změna telefonního čísla */}
+          {activePanel === "settings-phone" && (
+            <section className="card">
+              <h2 className="section-title">Změna telefonního čísla</h2>
+              <p className="section-hint" style={{ marginBottom: "1rem" }}>
+                Telefonní číslo musí začínat <strong>+420</strong> a mít přesně 9 číslic.
+                Změnu lze provést pouze jednou za 30 dní.
+              </p>
+              <form className="form" onSubmit={async (e) => {
+                e.preventDefault();
+                const phone = e.target.phone.value.trim().replace(/\s+/g, "");
+
+                if (!phone) return addToast("error", "Zadejte telefonní číslo.");
+
+                // Striktní klientská validace (+420 + 9 číslic)
+                if (!/^\+420\d{9}$/.test(phone)) {
+                  return addToast("error", "Telefonní číslo musí začínat +420 a mít přesně 9 dalších číslic (např. +420123456789).");
+                }
+
+                try {
+                  setLoading(true);
+                  const headers = buildAuthHeader();
+                  await api.patch("/client/update-info", { phone }, { headers });
+
+                  addToast("success", "Telefonní číslo bylo aktualizováno.");
+                  await loadDashboard();
+                } catch (e) {
+                  addToast("error", e.response?.data?.error || "Chyba při aktualizaci telefonu.");
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <label className="field-label">Nové telefonní číslo</label>
+                <input className="field-input" type="text" name="phone" placeholder="+420123456789" defaultValue={client?.phone} required />
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={loading}>
+                    {loading ? "Ukládám..." : "Uložit telefon"}
+                  </button>
+                </div>
+              </form>
             </section>
           )}
         </>

@@ -1,7 +1,7 @@
 .sb-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   opacity: 0;
   pointer-events: none;
   transition: opacity 180ms ease;
@@ -25,7 +25,7 @@
   transition: transform 220ms ease;
   z-index: 1000;
   padding: 14px;
-  box-shadow: 8px 0 24px rgba(0,0,0,0.25);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.25);
 }
 
 .sb-panel.open {
@@ -55,7 +55,7 @@
 }
 
 .sb-close:hover {
-  background: rgba(255,255,255,0.10);
+  background: rgba(255, 255, 255, 0.10);
 }
 
 .sb-nav {
@@ -76,15 +76,15 @@
 }
 
 .sb-item:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sb-item.active {
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .sb-item.disabled {
-  color: rgba(255,255,255,0.45);
+  color: rgba(255, 255, 255, 0.45);
   cursor: not-allowed;
 }
 
@@ -102,7 +102,8 @@
 
 /* spodní část */
 .sb-bottom {
-  margin-top:400px;/*⬅️ TOTO ho pošle úplně dolů */
+  margin-top: 400px;
+  /*⬅️ TOTO ho pošle úplně dolů */
   padding-top: 35px;
 }
 
@@ -112,12 +113,57 @@
   padding: 12px;
   border-radius: 12px;
   border: none;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0, 0, 0, 0.15);
   color: #2a0f1b;
   font-weight: 600;
   cursor: pointer;
 }
 
 .sb-logout:hover {
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Settings Submenu Styling */
+.sb-settings-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.sb-arrow {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.sb-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+  margin-top: 4px;
+}
+
+.sb-subitem {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sb-subitem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.sb-subitem.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-weight: 500;
 }

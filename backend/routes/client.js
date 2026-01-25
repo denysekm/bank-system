@@ -190,4 +190,65 @@ router.get("/children", requireAuth, async (req, res) => {
   }
 });
 
+// PATCH /api/client/update-info
+router.patch("/update-info", requireAuth, async (req, res) => {
+  try {
+    const clientId = req.user.clientId;
+    const userId = req.user.id;
+    const { address, phone } = req.body || {};
+
+    let updates = [];
+    let values = [];
+
+    if (address !== undefined) {
+      updates.push("address = ?");
+      values.push(address.trim() || null);
+    }
+
+    if (phone !== undefined) {
+      // Normalizace telefonu: odstranit mezery
+      const normalizedPhone = phone.replace(/\s+/g, "").trim();
+
+      // Striktní validace: musí začínat +420 a následovat přesně 9 číslic
+      if (!/^\+420\d{9}$/.test(normalizedPhone)) {
+        return res.status(400).json({ error: "Telefonní číslo musí začínat +420 a mít přesně 9 dalších číslic." });
+      }
+
+      // Kontrola 30denního limitu pro telefon
+      const [userRows] = await pool.query("SELECT LastPhoneChange FROM bank_account WHERE ID = ? LIMIT 1", [userId]);
+      if (userRows.length > 0 && userRows[0].LastPhoneChange) {
+        const now = new Date();
+        const last = new Date(userRows[0].LastPhoneChange);
+        const diffDays = (now - last) / (1000 * 60 * 60 * 24);
+
+        if (diffDays < 30) {
+          const remaining = Math.ceil(30 - diffDays);
+          return res.status(400).json({ error: `Telefonní číslo lze změnit až za ${remaining} dní.` });
+        }
+      }
+
+      updates.push("phone = ?");
+      values.push(normalizedPhone);
+
+      // Pokud měníme telefon, musíme aktualizovat datum i v bank_account (kde ho sledujeme pro omezení)
+      await pool.query("UPDATE bank_account SET LastPhoneChange = NOW() WHERE ID = ?", [userId]);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "Není co aktualizovat." });
+    }
+
+    values.push(clientId);
+    await pool.query(
+      `UPDATE client SET ${updates.join(", ")} WHERE ID = ?`,
+      values
+    );
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("PATCH /client/update-info error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;
