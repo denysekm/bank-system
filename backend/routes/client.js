@@ -214,24 +214,8 @@ router.patch("/update-info", requireAuth, async (req, res) => {
         return res.status(400).json({ error: "Telefonní číslo musí začínat +420 a mít přesně 9 dalších číslic." });
       }
 
-      // Kontrola 30denního limitu pro telefon
-      const [userRows] = await pool.query("SELECT LastPhoneChange FROM bank_account WHERE ID = ? LIMIT 1", [userId]);
-      if (userRows.length > 0 && userRows[0].LastPhoneChange) {
-        const now = new Date();
-        const last = new Date(userRows[0].LastPhoneChange);
-        const diffDays = (now - last) / (1000 * 60 * 60 * 24);
-
-        if (diffDays < 30) {
-          const remaining = Math.ceil(30 - diffDays);
-          return res.status(400).json({ error: `Telefonní číslo lze změnit až za ${remaining} dní.` });
-        }
-      }
-
       updates.push("phone = ?");
       values.push(normalizedPhone);
-
-      // Pokud měníme telefon, musíme aktualizovat datum i v bank_account (kde ho sledujeme pro omezení)
-      await pool.query("UPDATE bank_account SET LastPhoneChange = NOW() WHERE ID = ?", [userId]);
     }
 
     if (updates.length === 0) {

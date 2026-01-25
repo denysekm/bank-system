@@ -74,7 +74,6 @@ export const PhoneForm = ({ client, loading, onSubmit }) => (
         <h2 className="section-title">Změna telefonního čísla</h2>
         <p className="section-hint" style={{ marginBottom: "1rem" }}>
             Telefonní číslo musí začínat <strong>+420</strong> a mít přesně 9 číslic.
-            Změnu lze provést pouze jednou za 30 dní.
         </p>
         <form className="form" onSubmit={onSubmit}>
             <label className="field-label">Nové telefonní číslo</label>

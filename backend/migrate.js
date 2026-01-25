@@ -19,6 +19,12 @@ async function migrate() {
             await conn.query("ALTER TABLE bank_account ADD COLUMN Balance DECIMAL(15, 2) DEFAULT 0.00");
         }
 
+        if (!columnNames.includes("LastUsernameChange")) {
+            console.log("Adding LastUsernameChange column...");
+            await conn.query("ALTER TABLE bank_account ADD COLUMN LastUsernameChange DATETIME DEFAULT NULL");
+        }
+
+
         // 2. Generate AccountNumbers for existing accounts and migrate balances
         console.log("Migrating existing data...");
         const [accounts] = await conn.query("SELECT ID, AccountNumber FROM bank_account");
