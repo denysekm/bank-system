@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
 import { makeAuthHeader } from "../../lib/authHeader";
 import "./AdminDashboard.css";

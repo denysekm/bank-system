@@ -4,7 +4,7 @@ import "./Register.css";
 import "../../messages/error.css";
 import "../../messages/success.css";
 import { api } from "../../lib/api";
-import { useToast } from "../../ToastContext";
+import { useToast } from "../../context/ToastContext";
 
 
 function Register() {

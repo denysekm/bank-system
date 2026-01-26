@@ -1,8 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-import { AuthProvider } from "./AuthContext";
-import { ToastProvider } from "./ToastContext";
+import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
 
 import Navbar from "./mainPage/navbar/Navbar.jsx";
 import Main from "./mainPage/main/Main.jsx";

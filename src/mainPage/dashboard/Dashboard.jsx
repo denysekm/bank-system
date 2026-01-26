@@ -1,13 +1,13 @@
 // src/pages/Dashboard/Dashboard.jsx
 import React, { useEffect, useState, useCallback } from "react";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import "../../messages/error.css";
 import "../../messages/success.css";
 import { api } from "../../lib/api";
 import Sidebar from "./components/Sidebar/sidebar";
-import { useToast } from "../../ToastContext";
+import { useToast } from "../../context/ToastContext";
 
 // Importované sub-komponenty
 import ClientInfo from "./components/ClientInfo";
