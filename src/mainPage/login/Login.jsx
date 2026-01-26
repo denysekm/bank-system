@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import "./Login.css";
 import { api } from "../../lib/api";
@@ -142,15 +142,9 @@ export default function Login() {
         <div className="forgot-password-text">
           Nemáte účet?
           <br />
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/register");
-            }}
-          >
+          <Link to="/register">
             Zaregistrujte se
-          </a>
+          </Link>
         </div>
       </div>
     </div>

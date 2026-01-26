@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../../../lib/api";
 import { useToast } from "../../../../context/ToastContext";
-
+import {
+    Box,
+    TextField,
+    Button,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    Typography,
+    Grid,
+    InputAdornment,
+    CircularProgress,
+    Card,
+    CardContent
+} from "@mui/material";
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 export default function LoanForm({ onSuccess, buildAuthHeader, hasActiveLoan }) {
     const { addToast } = useToast();
     const [formData, setFormData] = useState({
@@ -68,98 +85,177 @@ export default function LoanForm({ onSuccess, buildAuthHeader, hasActiveLoan }) 
 
     if (hasActiveLoan) {
         return (
-            <div className="card credits-info-card">
-                <h3>Máte aktivní půjčku</h3>
-                <p>V tuto chvíli nelze zažádat o další půjčku, dokud nebude ta stávající řádně splacena.</p>
-            </div>
+            <Card sx={{ borderRadius: "24px", bgcolor: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", color: "#1a1a1a", border: "1px solid rgba(0, 0, 0, 0.05)", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)" }}>
+                <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                    <InfoOutlinedIcon sx={{ fontSize: 48, mb: 2, color: "#9770d2" }} />
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: "#1a1a1a" }}>Máte aktivní půjčku</Typography>
+                    <Typography variant="body1" sx={{ color: "#666" }}>
+                        V tuto chvíli nelze zažádat o další půjčku, dokud nebude ta stávající řádně splacena.
+                    </Typography>
+                </CardContent>
+            </Card>
         );
     }
 
     if (!checkingCard && !hasCreditCard) {
         return (
-            <div className="card credits-info-card border-warning">
-                <h3>Chybí kreditní karta</h3>
-                <p>Pro podání žádosti o půjčku musíte mít nejdříve vytvořenou <strong>kreditní kartu</strong>, na kterou vám budou peníze vyplaceny.</p>
-            </div>
+            <Card sx={{ borderRadius: "24px", bgcolor: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", color: "#1a1a1a", border: "1px solid #ed6c02", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)" }}>
+                <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                    <ErrorOutlineIcon sx={{ fontSize: 48, mb: 2, color: "#ed6c02" }} />
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: "#1a1a1a" }}>Chybí kreditní karta</Typography>
+                    <Typography variant="body1" sx={{ color: "#666" }}>
+                        Pro podání žádosti o půjčku musíte mít nejdříve vytvořenou <strong>kreditní kartu</strong>, na kterou vám budou peníze vyplaceny.
+                    </Typography>
+                </CardContent>
+            </Card>
         );
     }
 
     return (
-        <section className="card credits-form-card">
-            <h3 className="section-title">Žádost o půjčku</h3>
-            <p className="section-hint">Vyplňte základní údaje pro vyhodnocení vaší žádosti.</p>
+        <Box component="section" sx={{ p: { xs: 2, md: 4 }, bgcolor: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", borderRadius: "28px", border: "1px solid rgba(0, 0, 0, 0.05)", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)" }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: "#1a1a1a" }}>Žádost o půjčku</Typography>
+            <Typography variant="body1" sx={{ mb: 4, color: "#666" }}>
+                Vyplňte základní údaje pro vyhodnocení vaší žádosti.
+            </Typography>
 
-            <form onSubmit={handleSubmit} className="form credits-form">
-                <div className="transfer-grid">
-                    <div className="transfer-group">
-                        <label className="transfer-label">Požadovaná částka (CZK)</label>
-                        <div className="transfer-input-wrapper">
-                            <input
-                                type="number"
-                                name="amount"
-                                value={formData.amount}
-                                onChange={handleChange}
-                                className="transfer-input"
-                                placeholder="Např. 50000"
-                                required
-                                min="1000"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="transfer-group">
-                        <label className="transfer-label">Doba splácení (měsíce)</label>
-                        <select
-                            name="duration"
-                            value={formData.duration}
-                            onChange={handleChange}
-                            className="field-select"
-                            style={{ padding: '14px', borderRadius: '14px', height: '100%' }}
-                        >
-                            <option value="6">6 měsíců</option>
-                            <option value="12">12 měsíců</option>
-                            <option value="24">24 měsíců</option>
-                            <option value="36">36 měsíců</option>
-                            <option value="48">48 měsíců</option>
-                        </select>
-                    </div>
-
-                    <div className="transfer-group">
-                        <label className="transfer-label">Čistý měsíční příjem (CZK)</label>
-                        <input
+            <form onSubmit={handleSubmit}>
+                <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Požadovaná částka"
+                            name="amount"
                             type="number"
+                            variant="outlined"
+                            value={formData.amount}
+                            onChange={handleChange}
+                            required
+                            min="1000"
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end" sx={{ color: "#666" }}>CZK</InputAdornment>,
+                                sx: { 
+                                    borderRadius: "16px",
+                                    color: "#1a1a1a",
+                                    bgcolor: "white",
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.15)" },
+                                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.3)" },
+                                }
+                            }}
+                            InputLabelProps={{ sx: { color: "#666" } }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <FormControl fullWidth variant="outlined">
+                            <InputLabel sx={{ color: "#666" }}>Doba splácení</InputLabel>
+                            <Select
+                                name="duration"
+                                value={formData.duration}
+                                onChange={handleChange}
+                                label="Doba splácení"
+                                sx={{ 
+                                    borderRadius: "16px", 
+                                    color: "#1a1a1a",
+                                    bgcolor: "white",
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.15)" },
+                                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.3)" },
+                                }}
+                            >
+                                <MenuItem value="6">6 měsíců</MenuItem>
+                                <MenuItem value="12">12 měsíců</MenuItem>
+                                <MenuItem value="24">24 měsíců</MenuItem>
+                                <MenuItem value="36">36 měsíců</MenuItem>
+                                <MenuItem value="48">48 měsíců</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Čistý měsíční příjem"
                             name="income"
+                            type="number"
+                            variant="outlined"
                             value={formData.income}
                             onChange={handleChange}
-                            className="transfer-input"
-                            style={{ paddingLeft: '14px' }}
-                            placeholder="Např. 35000"
                             required
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end" sx={{ color: "#666" }}>CZK</InputAdornment>,
+                                sx: { 
+                                    borderRadius: "16px",
+                                    color: "#1a1a1a",
+                                    bgcolor: "white",
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.15)" },
+                                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.3)" },
+                                }
+                            }}
+                            InputLabelProps={{ sx: { color: "#666" } }}
                         />
-                    </div>
+                    </Grid>
 
-                    <div className="transfer-group">
-                        <label className="transfer-label">Stávající závazky (CZK / měsíc)</label>
-                        <input
-                            type="number"
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Stávající závazky"
                             name="obligations"
+                            type="number"
+                            variant="outlined"
                             value={formData.obligations}
                             onChange={handleChange}
-                            className="transfer-input"
-                            style={{ paddingLeft: '14px' }}
-                            placeholder="Např. 2000 (volitelné)"
+                            placeholder="Volitelné"
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end" sx={{ color: "#666" }}>CZK / měsíc</InputAdornment>,
+                                sx: { 
+                                    borderRadius: "16px",
+                                    color: "#1a1a1a",
+                                    bgcolor: "white",
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.15)" },
+                                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.3)" },
+                                }
+                            }}
+                            InputLabelProps={{ sx: { color: "#666" } }}
                         />
-                    </div>
-                </div>
+                    </Grid>
+                </Grid>
 
-                {error && <div className="inline-error">{error}</div>}
+                {error && (
+                    <Box sx={{ mt: 3, p: 2, borderRadius: "12px", bgcolor: "rgba(211, 47, 47, 0.1)", color: "#ff5252", display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <ErrorOutlineIcon fontSize="small" />
+                        <Typography variant="body2">{error}</Typography>
+                    </Box>
+                )}
 
-                <div className="transfer-actions">
-                    <button type="submit" className="transfer-submit-btn" disabled={loading}>
-                        {loading ? "Zpracovávám..." : "Odeslat žádost <span>→</span>"}
-                    </button>
-                </div>
+                <Box sx={{ mt: 5, display: "flex", justifyContent: "flex-end" }}>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={loading}
+                        endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowForwardIcon />}
+                        sx={{
+                            borderRadius: "18px",
+                            padding: "14px 40px",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            textTransform: "none",
+                            background: "linear-gradient(135deg, #9770d2, #d17171)",
+                            boxShadow: "0 8px 20px rgba(151, 112, 210, 0.4)",
+                            "&:hover": {
+                                background: "linear-gradient(135deg, #8a64c4, #c46464)",
+                                transform: "translateY(-2px)",
+                                boxShadow: "0 10px 25px rgba(151, 112, 210, 0.6)",
+                            },
+                            "&.Mui-disabled": {
+                                background: "rgba(255,255,255,0.1)",
+                                color: "rgba(255,255,255,0.3)"
+                            },
+                            transition: "all 0.3s ease"
+                        }}
+                    >
+                        {loading ? "Zpracovávám..." : "Odeslat žádost"}
+                    </Button>
+                </Box>
             </form>
-        </section>
+        </Box>
     );
 }
