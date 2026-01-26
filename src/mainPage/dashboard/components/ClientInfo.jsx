@@ -44,9 +44,16 @@ export default function ClientInfo({ client }) {
                     <span className="data-value pill-value">{client.clientType || "—"}</span>
                 </div>
                 <div className="data-item full-width">
-                    <div className="balance-summary">
-                        <span className="data-label">Celkový zůstatek</span>
-                        <span className="balance-value">{client.totalBalance} Kč</span>
+                    <div className="balance-summary-wrapper">
+                        <div className="balance-summary">
+                            <span className="data-label">Celkem mám peněz</span>
+                            <span className="balance-value">{client.totalBalance} Kč</span>
+                        </div>
+                        <div className="balance-breakdown">
+                            <span className="breakdown-item">Debetni: <strong>{client.debitTotal} Kč</strong></span>
+                            <span className="breakdown-separator">|</span>
+                            <span className="breakdown-item">kreditni: <strong>{client.creditTotal} Kč</strong></span>
+                        </div>
                     </div>
                 </div>
             </div>

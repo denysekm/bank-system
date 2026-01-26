@@ -57,7 +57,7 @@ router.post("/transfer", requireAuth, async (req, res) => {
     const fromAcc = fromRows[0];
 
     if (!fromAcc) throw new Error("Zdrojový účet nebyl nalezen.");
-    if (fromAcc.Balance < amount) throw new Error("Nedostatek prostředků na účtu.");
+    if (Number(fromAcc.Balance) < amount) throw new Error(`Nedostatek prostředků na účtu. K dispozici: ${Number(fromAcc.Balance).toFixed(2)} Kč.`);
     if (fromAcc.AccountNumber === toAccountNumber) throw new Error("Nelze poslat peníze na stejný účet.");
 
     // 2. Get destination account (and lock it)

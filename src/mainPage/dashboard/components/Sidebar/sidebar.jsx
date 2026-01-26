@@ -56,7 +56,7 @@ export default function Sidebar({ open, active, onSelect, onClose }) {
         <nav className="sb-nav">
           <Item id="dashboard" label="Dashboard" />
           <Item id="transfers" label="Převody mezi účty" />
-          <Item id="credits" label="Credits" disabled />
+          <Item id="credits" label="Credits" />
 
           <div className={`sb-settings-group ${settingsOpen ? "open" : ""}`}>
             <Item

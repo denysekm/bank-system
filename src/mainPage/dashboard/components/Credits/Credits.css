@@ -1,0 +1,244 @@
+.credits-container {
+    animation: fadeIn 0.3s ease;
+}
+
+.credits-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.credits-nav {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 0.3rem;
+    border-radius: 12px;
+}
+
+.credits-nav-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.credits-nav-btn.active {
+    background: #6c47ff;
+    color: white;
+    box-shadow: 0 4px 10px rgba(108, 71, 255, 0.2);
+}
+
+.credits-loading {
+    text-align: center;
+    padding: 4rem;
+    color: #6c47ff;
+    font-weight: 600;
+}
+
+/* Loan Detail Grid */
+.loan-detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 1000px) {
+    .loan-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.active-loan-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.loan-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.loan-status-pill {
+    background: #e1f5fe;
+    color: #0288d1;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.loan-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.loan-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.loan-progress-container {
+    margin-top: auto;
+}
+
+.loan-progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #444;
+}
+
+.loan-progress-bar {
+    height: 10px;
+    background: #f0f0f5;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.loan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c47ff, #a855f7);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+/* Installment Table */
+.installment-history-card {
+    grid-column: 1 / -1;
+}
+
+.installment-table-wrapper {
+    overflow-x: auto;
+}
+
+.installment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.installment-table th {
+    text-align: left;
+    padding: 1rem;
+    border-bottom: 2px solid #f0f0f5;
+    color: #888;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.installment-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f5;
+    font-size: 0.95rem;
+}
+
+.row-paid {
+    background: #fcfdfe;
+    color: #888;
+}
+
+.status-tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.tag-paid {
+    background: #e6f7ed;
+    color: #2ecc71;
+}
+
+.tag-pending {
+    background: #fff8e1;
+    color: #f1c40f;
+}
+
+.tag-overdue {
+    background: #fef2f2;
+    color: #e74c3c;
+}
+
+/* History */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.history-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid #f0f0f5;
+    background: #fbfbfd;
+    position: relative;
+}
+
+.history-amount {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #111;
+}
+
+.history-date {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.status-pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.pill-approved {
+    background: #e6f7ed;
+    color: #2ecc71;
+}
+
+.pill-rejected {
+    background: #fef2f2;
+    color: #e74c3c;
+}
+
+.rejection-text {
+    grid-column: 1 / -1;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed #fee2e2;
+    color: #b91c1c;
+    font-size: 0.85rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

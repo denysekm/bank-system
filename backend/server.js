@@ -11,6 +11,7 @@ import auth from "./routes/auth.js";
 import client from "./routes/client.js";
 import cards from "./routes/cards.js";
 import transactions from "./routes/transactions.js";
+import loans from "./routes/loans.js";
 import adminRoutes from "./routes/admin.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
@@ -51,6 +52,7 @@ app.use("/api/auth", auth);
 app.use("/api/client", client);
 app.use("/api/cards", cards);
 app.use("/api/transactions", transactions);
+app.use("/api/loans", requireAuth, loans);
 app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
 
 /* 5) start server */

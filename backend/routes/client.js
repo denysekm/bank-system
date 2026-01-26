@@ -37,7 +37,30 @@ router.get("/me", requireAuth, async (req, res) => {
     }
 
     const acc = accRows[0];
-    const totalBalance = acc.Balance || 0;
+    const accountBalance = Number(acc.Balance || 0);
+
+    // Calculate totals breakdown
+    const [cardRows] = await pool.query(
+      "SELECT CardType, Balance FROM bank_card WHERE BankAccountID = ?",
+      [req.user.id]
+    );
+
+    let debitCardTotal = 0;
+    let creditCardTotal = 0;
+
+    cardRows.forEach(row => {
+      const type = (row.CardType || "").toLowerCase();
+      const bal = Number(row.Balance || 0);
+      if (type.includes("debetní") || type.includes("debit")) {
+        debitCardTotal += bal;
+      } else {
+        creditCardTotal += bal;
+      }
+    });
+
+    const totalDebit = accountBalance + debitCardTotal;
+    const totalCredit = creditCardTotal;
+    const totalBalance = totalDebit + totalCredit;
     const mustChange = !!acc.MustChangeCredentials;
 
     res.json({
@@ -48,9 +71,12 @@ router.get("/me", requireAuth, async (req, res) => {
       phone: c.phone,
       clientType: c.ClientType,
       accountNumber: acc.AccountNumber,
-      totalBalance: Number(totalBalance).toFixed(2),
+      totalBalance: totalBalance.toFixed(2),
+      debitTotal: totalDebit.toFixed(2),
+      creditTotal: totalCredit.toFixed(2),
       login: req.user.login,
       mustChangeCredentials: mustChange,
+      isMinor: !!c.IsMinor,
     });
   } catch (err) {
     console.error("GET /api/client/me error:", err);

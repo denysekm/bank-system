@@ -10,7 +10,7 @@ export default function TransactionHistory({ transactions, formatDateTime }) {
             {transactions.length === 0 ? (
                 <div className="empty">Žádné transakce k zobrazení.</div>
             ) : (
-                <div className="transactions-list">
+                <div className="transactions-list scrollable-installment-container" style={{ padding: '0.5rem' }}>
                     {transactions.map((tx) => (
                         <div key={tx.id} className="transaction-item">
                             <div><span>Od:</span> <strong>{tx.sender}</strong></div>

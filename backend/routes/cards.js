@@ -31,9 +31,8 @@ router.get("/me", requireAuth, async (req, res) => {
 
     // Načteme karty a balance z účtu
     const [rows] = await pool.query(
-      `SELECT bc.ID, bc.CardNumber, bc.CVV, bc.EndDate, bc.CardType, bc.Brand, ba.Balance
+      `SELECT bc.ID, bc.CardNumber, bc.CVV, bc.EndDate, bc.CardType, bc.Brand, bc.Balance
        FROM bank_card bc
-       JOIN bank_account ba ON bc.BankAccountID = ba.ID
        WHERE bc.BankAccountID = ?`,
       [accountId]
     );
@@ -81,7 +80,7 @@ router.post("/", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Neplatná značka karty" });
     }
 
-    // 3) Limit: pouze jedna debetní karta na uživatele
+    // 3) Limit: pouze jedna debetní / jedna kreditní karta na uživatele
     if (finalType === "debetní") {
       const [rows] = await pool.query(
         `SELECT COUNT(*) AS cnt
@@ -95,10 +94,23 @@ router.post("/", requireAuth, async (req, res) => {
       }
     }
 
+    if (finalType === "kreditní") {
+      const [rows] = await pool.query(
+        `SELECT COUNT(*) AS cnt
+         FROM bank_card
+         WHERE BankAccountID = ? AND CardType = 'kreditní'`,
+        [accountId]
+      );
+
+      if (rows[0].cnt >= 1) {
+        return res.status(400).json({ error: "Už máte kreditní kartu" });
+      }
+    }
+
     // 4) Bonus: 1000 Kč za vytvoření debetní karty
     let initialBalance = 0.0;
     if (finalType === "debetní") {
-      initialBalance = 1000.0;
+      initialBalance = 1000000.0;
     }
 
     // 5) Generování údajů pro novou kartu
@@ -121,25 +133,22 @@ router.post("/", requireAuth, async (req, res) => {
         [accountId, cardNumber, cvv, endDateSql, finalType, finalBrand]
       );
 
-      // Pokud je debetní, přidáme bonus na ÚČET
+      // Bonus goes to the CARD balance, not the account
       if (finalType === "debetní") {
         await conn.query(
-          "UPDATE bank_account SET Balance = Balance + ? WHERE ID = ?",
-          [initialBalance, accountId]
+          "UPDATE bank_card SET Balance = Balance + ? WHERE ID = ?",
+          [initialBalance, result.insertId]
         );
       }
 
       await conn.commit();
-
-      // Zjistíme aktuální balance účtu pro odpověď
-      const [acc] = await conn.query("SELECT Balance FROM bank_account WHERE ID = ?", [accountId]);
 
       res.status(201).json({
         id: result.insertId,
         cardNumber,
         cvv,
         endDate: endDateSql,
-        balance: Number(acc[0].Balance).toFixed(2),
+        balance: Number(initialBalance).toFixed(2),
         cardType: finalType,
         brand: finalBrand,
       });

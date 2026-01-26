@@ -18,6 +18,8 @@ import TransferForm from "./components/TransferForm";
 import { PasswordForm, UsernameForm, AddressForm, PhoneForm } from "./components/Settings/SettingsForms";
 import CreateCardModal from "./components/Modals/CreateCardModal";
 import ChildInviteModal from "./components/Modals/ChildInviteModal";
+import MandatoryCredentialsModal from "./components/Modals/MandatoryCredentialsModal";
+import CreditsPage from "./components/Credits/CreditsPage";
 
 /**
  * Hlavní Dashboard aplikace.
@@ -189,6 +191,11 @@ export default function Dashboard() {
     }
   }
 
+  const handleCredInputChange = (e) => {
+    const { name, value } = e.target;
+    setCredForm(prev => ({ ...prev, [name]: value }));
+  };
+
   async function handleCredSubmit(e) {
     e.preventDefault();
     if (!credForm.newLogin || !credForm.newPassword) return setCredError("Vyplň login i heslo.");
@@ -197,8 +204,11 @@ export default function Dashboard() {
       setCredLoading(true);
       const headers = buildAuthHeader();
       await api.post("/auth/change-credentials", { newLogin: credForm.newLogin, newPassword: credForm.newPassword }, { headers });
-      setUser(null);
-      navigate("/login");
+
+      // Update local context instead of logging out
+      setUser({ ...user, login: credForm.newLogin, password: credForm.newPassword });
+      setClient(prev => ({ ...prev, mustChangeCredentials: false }));
+      addToast("success", "Údaje byly úspěšně změněny.");
     } catch (e) {
       setCredError(e.response?.data?.error || "Chyba při změně údajů.");
     } finally {
@@ -269,19 +279,6 @@ export default function Dashboard() {
         <main className="dashboard-content">
           {activePanel === "dashboard" && (
             <div className="dashboard-grid">
-              {client?.mustChangeCredentials && (
-                <section className="card warning-card">
-                  <h2 className="section-title">⚠ Musíš změnit údaje</h2>
-                  <form onSubmit={handleCredSubmit} className="form">
-                    <input className="field-input" type="text" placeholder="Nový login" value={credForm.newLogin} onChange={e => setCredForm({ ...credForm, newLogin: e.target.value })} />
-                    <input className="field-input" type="password" placeholder="Nové heslo" value={credForm.newPassword} onChange={e => setCredForm({ ...credForm, newPassword: e.target.value })} />
-                    <input className="field-input" type="password" placeholder="Potvrzení" value={credForm.confirmPassword} onChange={e => setCredForm({ ...credForm, confirmPassword: e.target.value })} />
-                    {credError && <div className="inline-error">{credError}</div>}
-                    <button className="btn btn-primary" type="submit" disabled={credLoading}>Uložit</button>
-                  </form>
-                </section>
-              )}
-
               <ClientInfo client={client} />
 
               <CardManager
@@ -318,6 +315,15 @@ export default function Dashboard() {
           {activePanel === "settings-username" && <UsernameForm user={user} loading={loading} onSubmit={handleUsernameSubmit} />}
           {activePanel === "settings-address" && <AddressForm client={client} loading={loading} onSubmit={e => handleInfoUpdate(e, "address")} />}
           {activePanel === "settings-phone" && <PhoneForm client={client} loading={loading} onSubmit={e => handleInfoUpdate(e, "phone")} />}
+
+          {activePanel === "credits" && (
+            <CreditsPage
+              user={user}
+              client={client}
+              buildAuthHeader={buildAuthHeader}
+              onActionComplete={loadDashboard}
+            />
+          )}
         </main>
       )}
 
@@ -341,6 +347,16 @@ export default function Dashboard() {
         onInputChange={e => setChildForm({ ...childForm, [e.target.name]: e.target.value })}
         onSubmit={handleChildInviteSubmit}
       />
+
+      {client?.mustChangeCredentials && (
+        <MandatoryCredentialsModal
+          credForm={credForm}
+          credError={credError}
+          credLoading={credLoading}
+          onInputChange={handleCredInputChange}
+          onSubmit={handleCredSubmit}
+        />
+      )}
     </div>
   );
 }
