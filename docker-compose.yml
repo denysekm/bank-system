@@ -1,15 +1,15 @@
 services:
   db:
     image: mysql:8.0
-    container_name: bank-db
-    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bank
+      MYSQL_USER: bank_app
+      MYSQL_PASSWORD: "1234"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
+      - ./bank_dump.sql:/docker-entrypoint-initdb.d/001_dump.sql:ro
+
     networks:
       - bank-network
 
